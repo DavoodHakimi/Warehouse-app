@@ -70,9 +70,9 @@ func MeHandler(c *gin.Context) {
 		})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"user_id":    userID,
-		"username":   userName,
-		"company_id": companyID,
+	c.JSON(http.StatusOK, meResponse{
+		UserID:    userID.(int),
+		UserName:  userName.(string),
+		CompanyID: companyID.(int),
 	})
 }
