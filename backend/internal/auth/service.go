@@ -1,0 +1,109 @@
+package auth
+
+import (
+	"errors"
+	"net/http"
+	"os"
+	"time"
+
+	"golang.org/x/crypto/bcrypt"
+
+	"github.com/golang-jwt/jwt/v5"
+
+	"github.com/DavoodHakimi/warehouse-app/internal/company"
+	"github.com/DavoodHakimi/warehouse-app/internal/users"
+)
+
+func SignUp(r *SignUpRequest) error {
+	// TODO: Implement transaction to ensure both company and user creation
+	newCompany := company.Company{
+		Name: r.CompanyName,
+	}
+	err := createComapny(&newCompany)
+	if err != nil {
+		return err
+	}
+
+	hashedPassword, err := HashPassword(r.Password)
+	if err != nil {
+		return err
+	}
+
+	newUser := users.User{
+		FullName:    r.FullName,
+		UserName:    r.UserName,
+		UserTypeID:  1,
+		Password:    string(hashedPassword),
+		PhoneNumber: r.PhoneNumber,
+		Email:       r.Email,
+		CompanyID:   newCompany.ID,
+	}
+	err = createUser(&newUser)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func Login(r *LogInRequest) (string, error, int) {
+
+	user, err := readUser(r)
+	if err != nil {
+		return "", err, http.StatusNotFound
+	}
+	if v := CheckPassword(r.Password, user.Password); v {
+		token, err := generateToken(user)
+		if err == nil {
+			return token, err, http.StatusOK
+		}
+	}
+	return "", errors.New("User can not be recognized"), http.StatusUnauthorized
+}
+
+func HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+	if err != nil {
+		return "", err
+	}
+	return string(bytes), nil
+}
+
+func CheckPassword(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
+}
+
+func generateToken(u *users.User) (string, error) {
+
+	secretKey := []byte(os.Getenv("JWT_SECRET"))
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id":    u.ID,
+		"username":   u.UserName,
+		"company_id": u.CompanyID,
+		"role":       u.UserTypeID,
+		"exp":        time.Now().Add(time.Hour * 24).Unix(),
+	})
+	tokenString, err := token.SignedString(secretKey)
+	return tokenString, err
+}
+
+func ValidateToken(tokenString string) (jwt.MapClaims, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+		return []byte(os.Getenv("JWT_SECRET")), nil
+	})
+
+	if err != nil || !token.Valid {
+		return nil, errors.New("invalid token")
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, errors.New("invalid claims")
+	}
+
+	return claims, nil
+}
