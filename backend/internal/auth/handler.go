@@ -6,7 +6,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SignUpHandler(c *gin.Context) {
+type Handler struct {
+	service *Service
+}
+
+func NewHandler(service *Service) *Handler {
+	return &Handler{service: service}
+}
+
+func (h *Handler) SignUpHandler(c *gin.Context) {
 
 	var req SignUpRequest
 
@@ -17,7 +25,7 @@ func SignUpHandler(c *gin.Context) {
 		})
 	}
 
-	if err := SignUp(&req); err != nil {
+	if err := h.service.SignUp(&req); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -28,7 +36,7 @@ func SignUpHandler(c *gin.Context) {
 
 }
 
-func LogInHandler(c *gin.Context) {
+func (h *Handler) LogInHandler(c *gin.Context) {
 
 	var req LogInRequest
 
@@ -39,7 +47,7 @@ func LogInHandler(c *gin.Context) {
 		})
 	}
 
-	token, err, status := Login(&req)
+	token, err, status := h.service.Login(&req)
 	if err != nil && status == 404 {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error":   "User not found",

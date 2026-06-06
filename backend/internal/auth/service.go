@@ -14,12 +14,20 @@ import (
 	"github.com/DavoodHakimi/warehouse-app/internal/users"
 )
 
-func SignUp(r *SignUpRequest) error {
+type Service struct {
+	repo *Repository
+}
+
+func NewService(repo *Repository) *Service {
+	return &Service{repo: repo}
+}
+
+func (s *Service) SignUp(r *SignUpRequest) error {
 	// TODO: Implement transaction to ensure both company and user creation
 	newCompany := company.Company{
 		Name: r.CompanyName,
 	}
-	err := createComapny(&newCompany)
+	err := s.repo.createComapny(&newCompany)
 	if err != nil {
 		return err
 	}
@@ -38,7 +46,7 @@ func SignUp(r *SignUpRequest) error {
 		Email:       r.Email,
 		CompanyID:   newCompany.ID,
 	}
-	err = createUser(&newUser)
+	err = s.repo.createUser(&newUser)
 	if err != nil {
 		return err
 	}
@@ -46,9 +54,9 @@ func SignUp(r *SignUpRequest) error {
 	return nil
 }
 
-func Login(r *LogInRequest) (string, error, int) {
+func (s *Service) Login(r *LogInRequest) (string, error, int) {
 
-	user, err := readUser(r)
+	user, err := s.repo.readUser(r)
 	if err != nil {
 		return "", err, http.StatusNotFound
 	}

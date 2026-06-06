@@ -1,39 +1,44 @@
 package auth
 
 import (
-	"errors"
-	"log"
-
 	"github.com/DavoodHakimi/warehouse-app/internal/company"
-	"github.com/DavoodHakimi/warehouse-app/internal/database"
 	"github.com/DavoodHakimi/warehouse-app/internal/users"
+	"gorm.io/gorm"
 )
 
-func createComapny(c *company.Company) error {
-	db := database.GetDB()
-	res := db.Create(c)
-	if res.Error != nil {
+type Repository struct {
+	db *gorm.DB
+}
 
-		return res.Error
-	}
+func NewRepository(db *gorm.DB) *Repository {
+	return &Repository{db: db}
+}
+
+func (r *Repository) createComapny(c *company.Company) error {
+	r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(c).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
 	return nil
 }
 
-func createUser(u *users.User) error {
-	db := database.GetDB()
+func (r *Repository) createUser(u *users.User) error {
+	r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(u).Error; err != nil {
+			return err
+		}
 
-	res := db.Create(&u)
-	if res.Error != nil {
-		log.Fatal("Error creating new User:", res.Error)
-		return errors.New("Failed to create user")
-	}
+		return nil
+	})
 	return nil
 }
 
-func readUser(d *LogInRequest) (*users.User, error) {
-	db := database.GetDB()
+func (r *Repository) readUser(d *LogInRequest) (*users.User, error) {
 	var u users.User
-	result := db.Where("user_name = ?", d.UserName).First(&u)
+	result := r.db.Where("user_name = ?", d.UserName).First(&u)
 	if result.Error != nil {
 		return nil, result.Error
 	}
