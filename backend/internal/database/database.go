@@ -61,6 +61,8 @@ func RunMigrations() error {
 		&company.Company{},
 		&users.User{},
 		&users.UserType{},
+		&users.Permission{},
+		&users.PermissionType{},
 		&partners.BusinessPartner{},
 		&partners.BusinessPartnerType{},
 		&products.Product{},
