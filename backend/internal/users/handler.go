@@ -61,8 +61,8 @@ func (h *Handler) UserCreationHandler(c *gin.Context) {
 			"details": err.Error(),
 		})
 	}
-
-	err := h.service.CreateUser(&req)
+	comapnyID, _ := c.Get("company_id")
+	err := h.service.CreateUser(&req, comapnyID.(int))
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -78,9 +78,49 @@ func (h *Handler) UserCreationHandler(c *gin.Context) {
 }
 
 func (h *Handler) UserUpdateHandler(c *gin.Context) {
+	var req UpdateUserRequest
 
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Validation Failed.",
+			"details": err.Error(),
+		})
+		return
+	}
+	err := h.service.UpdateUser(&req, req.ID)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": "User updated succesfully",
+	})
 }
 
 func (h *Handler) UserDeleteHandler(c *gin.Context) {
+	userId := c.Param("userID")
 
+	user, err := h.service.ReadUser(userId)
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
+
+	err = h.service.DeleteUser(user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "User deleted succesfully",
+	})
 }
