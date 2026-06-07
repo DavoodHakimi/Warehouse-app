@@ -10,6 +10,7 @@ import (
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 
+	"github.com/DavoodHakimi/warehouse-app/internal/audit"
 	"github.com/DavoodHakimi/warehouse-app/internal/company"
 	"github.com/DavoodHakimi/warehouse-app/internal/orders"
 	"github.com/DavoodHakimi/warehouse-app/internal/partners"
@@ -69,7 +70,8 @@ func RunMigrations() error {
 		&products.Stock{},
 		&orders.Currency{},
 		&orders.Order{},
-		&orders.OrderItem{})
+		&orders.OrderItem{},
+		&audit.Log{})
 	if err != nil {
 		panic("DB migration failed: " + err.Error())
 	}
