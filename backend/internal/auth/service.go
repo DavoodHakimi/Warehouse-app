@@ -6,8 +6,6 @@ import (
 	"os"
 	"time"
 
-	"golang.org/x/crypto/bcrypt"
-
 	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/DavoodHakimi/warehouse-app/internal/company"
@@ -32,7 +30,7 @@ func (s *Service) SignUp(r *SignUpRequest) error {
 		return err
 	}
 
-	hashedPassword, err := HashPassword(r.Password)
+	hashedPassword, err := users.HashPassword(r.Password)
 	if err != nil {
 		return err
 	}
@@ -60,26 +58,13 @@ func (s *Service) Login(r *LogInRequest) (string, error, int) {
 	if err != nil {
 		return "", err, http.StatusNotFound
 	}
-	if v := CheckPassword(r.Password, user.Password); v {
+	if v := users.CheckPassword(r.Password, user.Password); v {
 		token, err := generateToken(user)
 		if err == nil {
 			return token, err, http.StatusOK
 		}
 	}
 	return "", errors.New("User can not be recognized"), http.StatusUnauthorized
-}
-
-func HashPassword(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 12)
-	if err != nil {
-		return "", err
-	}
-	return string(bytes), nil
-}
-
-func CheckPassword(password, hash string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	return err == nil
 }
 
 func generateToken(u *users.User) (string, error) {
