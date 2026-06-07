@@ -5,12 +5,13 @@ type UsersInfo struct {
 }
 
 type UserInfoResponse struct {
-	FullName    string `json:"full_name" binding:"required,min=4,max=100"`
-	UserName    string `json:"user_name" binding:"required,min=5,max=16"`
-	Password    string `json:"-" binding:"required,min=8"`
-	UserTypeID  int    `json:"user_type_id" binding:"required,numeric"`
-	PhoneNumber string `json:"phone_number" form:"phone_number" binding:"required,numeric,len=11,startswith=09"`
-	Email       string `json:"email" form:"email" binding:"required,min=8,max=32,email"`
+	ID          int    `json:"id"` // do not show this in frontend, BUT STORE IT TO USE IN UPDATE
+	FullName    string `json:"full_name"`
+	UserName    string `json:"user_name"`
+	Password    string `json:"-"`
+	UserTypeID  int    `json:"user_type_id"`
+	PhoneNumber string `json:"phone_number" form:"phone_number"`
+	Email       string `json:"email" form:"email"`
 }
 
 type CreateUserRequest struct {
@@ -21,4 +22,13 @@ type CreateUserRequest struct {
 	PasswordConfirmation string `json:"password_confirmation" binding:"eqfield=Password"`
 	PhoneNumber          string `json:"phone_number" form:"phone_number" binding:"required,numeric,len=11,startswith=09"`
 	Email                string `json:"email" form:"email" binding:"required,min=8,max=32,email"`
+}
+
+type UpdateUserRequest struct {
+	ID          int    `json:"id" binding:"required,numeric"`
+	FullName    string `json:"full_name" binding:"required,min=4,max=100"`
+	UserName    string `json:"user_name" binding:"required,min=5,max=16"`
+	UserTypeID  int    `json:"user_type_id" binding:"required,numeric"`
+	PhoneNumber string `json:"phone_number" form:"phone_number" binding:"required,numeric,len=11,startswith=09"`
+	Email       string `json:"email" form:"email" binding:"required,min=8,max=32,email"`
 }
