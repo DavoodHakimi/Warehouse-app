@@ -1,0 +1,66 @@
+package partners
+
+import (
+	"gorm.io/gorm"
+)
+
+type Repository struct {
+	db *gorm.DB
+}
+
+func NewRepository(db *gorm.DB) *Repository {
+	return &Repository{db: db}
+}
+
+func (r *Repository) ReadCompanyPartners(companyID int) ([]BusinessPartner, error) {
+
+	var partners []BusinessPartner
+	res := r.db.Where("comnpany_id = ?", companyID).Find(&partners)
+	if res.Error != nil {
+
+		return nil, res.Error
+	}
+	return partners, nil
+}
+
+func (r *Repository) FindByID(id int) (*BusinessPartner, error) {
+	var partner BusinessPartner
+	res := r.db.Joins("BusinessPartnerType").First(&partner, id)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	return &partner, nil
+}
+
+func (r *Repository) Create(partner *BusinessPartner) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(partner).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
+func (r *Repository) Update(partner *BusinessPartner) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		return tx.Model(&BusinessPartner{}).Where("id = ?", partner.ID).Updates(map[string]interface{}{
+			"name":                 partner.Name,
+			"email":                partner.Email,
+			"phone_number":         partner.PhoneNumber,
+			"partner_type_id":      partner.BusinessPartnerTypeID,
+			"contact_name":         partner.ContactName,
+			"contant_phone_number": partner.ContactPhoneNumber,
+		}).Error
+	})
+}
+
+func (r *Repository) Delete(partner *BusinessPartner) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Delete(partner).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
