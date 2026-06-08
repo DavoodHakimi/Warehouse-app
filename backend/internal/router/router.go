@@ -38,24 +38,24 @@ func Setup() *gin.Engine {
 			userService := users.NewService(userRepo)
 			userHandler := users.NewHandler(userService)
 			{
-				usersGroup.GET("/", userHandler.AllUsersHandler)
-				usersGroup.GET("/:userID", userHandler.UserInfoHandler)
-				usersGroup.POST("", userHandler.UserCreationHandler)
-				usersGroup.PATCH("/:userID", userHandler.UserUpdateHandler)
-				usersGroup.DELETE("/:userID", userHandler.UserDeleteHandler)
+				usersGroup.GET("/", middleware.RBACMiddleware("users.read"), userHandler.AllUsersHandler)
+				usersGroup.POST("/", middleware.RBACMiddleware("users.create"), userHandler.UserCreationHandler)
+				usersGroup.GET("/:userID", middleware.RBACMiddleware("users.read"), userHandler.UserInfoHandler)
+				usersGroup.PATCH("/:userID", middleware.RBACMiddleware("users.update"), userHandler.UserUpdateHandler)
+				usersGroup.DELETE("/:userID", middleware.RBACMiddleware("users.delete"), userHandler.UserDeleteHandler)
 			}
 
 			ordersGroup := protected.Group("/orders")
 			{
-				ordersGroup.GET("/")
-				ordersGroup.GET("/:orderID")
-				ordersGroup.POST("")
-				ordersGroup.PATCH("/:orderID")
-				ordersGroup.DELETE("/:orderID")
-				ordersGroup.POST("/:orderID/approve")
-				ordersGroup.POST("/:orderID/pack")
-				ordersGroup.POST("/:orderID/ship")
-				ordersGroup.POST("/:orderID/receive")
+				ordersGroup.GET("/", middleware.RBACMiddleware("orders.read"))
+				ordersGroup.GET("/:orderID", middleware.RBACMiddleware("orders.read"))
+				ordersGroup.POST("/", middleware.RBACMiddleware("orders.create"))
+				ordersGroup.PATCH("/:orderID", middleware.RBACMiddleware("orders.update"))
+				ordersGroup.DELETE("/:orderID", middleware.RBACMiddleware("orders.delete"))
+				ordersGroup.POST("/:orderID/approve", middleware.RBACMiddleware("orders.update"))
+				ordersGroup.POST("/:orderID/pack", middleware.RBACMiddleware("orders.pack"))
+				ordersGroup.POST("/:orderID/ship", middleware.RBACMiddleware("orders.ship"))
+				ordersGroup.POST("/:orderID/receive", middleware.RBACMiddleware("orders.receive"))
 			}
 
 			productsGroup := protected.Group("/products")
@@ -64,11 +64,11 @@ func Setup() *gin.Engine {
 				productService := products.NewService(productRepo)
 				productHandler := products.NewHandler(productService)
 
-				productsGroup.GET("/", productHandler.AllProductsHandler)
-				productsGroup.POST("/", productHandler.ProductCreationHandler)
-				productsGroup.GET("/:productNumber/", productHandler.ProductInfoHandler)
-				productsGroup.PATCH("/:productNumber/", productHandler.ProductUpdateHandler)
-				productsGroup.DELETE("/:productNumber/", productHandler.ProductDeleteHandler)
+				productsGroup.GET("/", middleware.RBACMiddleware("products.read"), productHandler.AllProductsHandler)
+				productsGroup.POST("/", middleware.RBACMiddleware("products.create"), productHandler.ProductCreationHandler)
+				productsGroup.GET("/:productNumber/", middleware.RBACMiddleware("products.read"), productHandler.ProductInfoHandler)
+				productsGroup.PATCH("/:productNumber/", middleware.RBACMiddleware("products.update"), productHandler.ProductUpdateHandler)
+				productsGroup.DELETE("/:productNumber/", middleware.RBACMiddleware("products.delete"), productHandler.ProductDeleteHandler)
 
 			}
 
@@ -78,11 +78,11 @@ func Setup() *gin.Engine {
 				partnerService := partners.NewService(partnerRepo)
 				partnerHandler := partners.NewHandler(partnerService)
 
-				partnersGroup.GET("/", partnerHandler.AllPartnersHandler)
-				partnersGroup.GET("/:PartnerID", partnerHandler.PartnerInfoHandler)
-				partnersGroup.POST("", partnerHandler.PartnerCreationHandler)
-				partnersGroup.PATCH("/:PartnerID", partnerHandler.PartnerUpdateHandler)
-				partnersGroup.DELETE("/:PartnerID", partnerHandler.PartnerDeleteHandler)
+				partnersGroup.GET("/", middleware.RBACMiddleware("partners.read"), partnerHandler.AllPartnersHandler)
+				partnersGroup.POST("/", middleware.RBACMiddleware("partners.create"), partnerHandler.PartnerCreationHandler)
+				partnersGroup.GET("/:PartnerID", middleware.RBACMiddleware("partners.read"), partnerHandler.PartnerInfoHandler)
+				partnersGroup.PATCH("/:PartnerID", middleware.RBACMiddleware("partners.update"), partnerHandler.PartnerUpdateHandler)
+				partnersGroup.DELETE("/:PartnerID", middleware.RBACMiddleware("partners.delete"), partnerHandler.PartnerDeleteHandler)
 			}
 		}
 	}
