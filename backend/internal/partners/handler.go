@@ -100,7 +100,7 @@ func (h *Handler) PartnerUpdateHandler(c *gin.Context) {
 	})
 }
 
-func (h *Handler) UserDeleteHandler(c *gin.Context) {
+func (h *Handler) PartnerDeleteHandler(c *gin.Context) {
 	partnerId := c.Param("PartnerID")
 
 	user, err := h.service.ReadPartner(partnerId)
