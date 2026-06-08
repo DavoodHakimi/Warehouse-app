@@ -4,6 +4,8 @@ import (
 	"github.com/DavoodHakimi/warehouse-app/internal/auth"
 	"github.com/DavoodHakimi/warehouse-app/internal/database"
 	"github.com/DavoodHakimi/warehouse-app/internal/middleware"
+	"github.com/DavoodHakimi/warehouse-app/internal/partners"
+	"github.com/DavoodHakimi/warehouse-app/internal/products"
 	"github.com/DavoodHakimi/warehouse-app/internal/users"
 
 	"github.com/gin-gonic/gin"
@@ -36,11 +38,11 @@ func Setup() *gin.Engine {
 			userService := users.NewService(userRepo)
 			userHandler := users.NewHandler(userService)
 			{
-				usersGroup.GET("/", userHandler.AllUsersHandler)             //returning list of company users, only ceo can see
-				usersGroup.GET("/:userID", userHandler.UserInfoHandler)      //returning user details, only ceo can see
-				usersGroup.POST("", userHandler.UserCreationHandler)         //creating new user, only ceo can do
-				usersGroup.PATCH("/:userID", userHandler.UserUpdateHandler)  //only ceo and manager can edit user info, but not password
-				usersGroup.DELETE("/:userID", userHandler.UserDeleteHandler) //only ceo can delete user
+				usersGroup.GET("/", userHandler.AllUsersHandler)
+				usersGroup.GET("/:userID", userHandler.UserInfoHandler)
+				usersGroup.POST("", userHandler.UserCreationHandler)
+				usersGroup.PATCH("/:userID", userHandler.UserUpdateHandler)
+				usersGroup.DELETE("/:userID", userHandler.UserDeleteHandler)
 			}
 
 			ordersGroup := protected.Group("/orders")
@@ -50,29 +52,37 @@ func Setup() *gin.Engine {
 				ordersGroup.POST("")
 				ordersGroup.PATCH("/:orderID")
 				ordersGroup.DELETE("/:orderID")
+				ordersGroup.POST("/:orderID/approve")
+				ordersGroup.POST("/:orderID/pack")
+				ordersGroup.POST("/:orderID/ship")
+				ordersGroup.POST("/:orderID/receive")
 			}
 
 			productsGroup := protected.Group("/products")
 			{
-				productsGroup.GET("/")
-				productsGroup.POST("/")
-				productsGroup.POST("/:productID/")
-				productsGroup.PATCH("/:productID/")
-				productsGroup.DELETE("/:productID/")
-				productsGroup.POST("/:productID/approve")
-				productsGroup.POST("/:productID/pack")
-				productsGroup.POST("/:productID/ship")
-				productsGroup.POST("/:productID/receive")
+				productRepo := products.NewRepository(db)
+				productService := products.NewService(productRepo)
+				productHandler := products.NewHandler(productService)
+
+				productsGroup.GET("/", productHandler.AllProductsHandler)
+				productsGroup.POST("/", productHandler.ProductCreationHandler)
+				productsGroup.GET("/:productNumber/", productHandler.ProductInfoHandler)
+				productsGroup.PATCH("/:productNumber/", productHandler.ProductUpdateHandler)
+				productsGroup.DELETE("/:productNumber/", productHandler.ProductDeleteHandler)
 
 			}
 
 			partnersGroup := protected.Group("/partners")
 			{
-				partnersGroup.GET("/")
-				partnersGroup.GET("/:partnerID")
-				partnersGroup.POST("")
-				partnersGroup.PATCH("/:partnerID")
-				partnersGroup.DELETE("/:partnerID")
+				partnerRepo := partners.NewRepository(db)
+				partnerService := partners.NewService(partnerRepo)
+				partnerHandler := partners.NewHandler(partnerService)
+
+				partnersGroup.GET("/", partnerHandler.AllPartnersHandler)
+				partnersGroup.GET("/:PartnerID", partnerHandler.PartnerInfoHandler)
+				partnersGroup.POST("", partnerHandler.PartnerCreationHandler)
+				partnersGroup.PATCH("/:PartnerID", partnerHandler.PartnerUpdateHandler)
+				partnersGroup.DELETE("/:PartnerID", partnerHandler.PartnerDeleteHandler)
 			}
 		}
 	}
