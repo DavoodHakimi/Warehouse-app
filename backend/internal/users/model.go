@@ -25,13 +25,15 @@ type User struct {
 
 type UserType struct {
 	gorm.Model
-	Name string `gorm:"unique; not null" json:"name"`
+	Name        string `gorm:"unique; not null" json:"name"`
+	PersianName string `gorm:"unique" json:"persian_name"`
+	Description string `json:"description,omitempty"`
 }
 
 type Permission struct {
 	gorm.Model
-	UserTypeID   uint `json:"user_type_id"`
-	PermissionID uint `json:"permission_id"`
+	UserTypeID       uint `json:"user_type_id"`
+	PermissionTypeID uint `json:"permission_type_id"`
 
 	// Relationships
 	UserType       UserType       `gorm:"foreignKey:UserTypeID" json:"user_type,omitempty"`
