@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"github.com/DavoodHakimi/warehouse-app/internal/users"
 )
@@ -36,85 +37,83 @@ func (s *Seeder) Run(ctx context.Context) error {
 }
 
 func (s *Seeder) seedUserTypes(ctx context.Context) error {
-	for _, ut := range userTypes {
-		result := s.db.WithContext(ctx).
-			Where(users.UserType{Name: ut.Name}).
-			FirstOrCreate(&users.UserType{
-				Name:        ut.Name,
-				PersianName: ut.PersianName,
-				Description: ut.Description,
-			})
-
-		if result.Error != nil {
-			return fmt.Errorf("upserting user type %q: %w", ut.Name, result.Error)
+	records := make([]users.UserType, len(userTypes))
+	for i, ut := range userTypes {
+		records[i] = users.UserType{
+			Model:       gorm.Model{ID: ut.ID},
+			Name:        ut.Name,
+			PersianName: ut.PersianName,
+			Description: ut.Description,
 		}
 	}
 
-	log.Printf("User types seeded (%d)", len(userTypes))
+	result := s.db.WithContext(ctx).
+		Clauses(clause.OnConflict{DoNothing: true}).
+		Create(&records)
+
+	if result.Error != nil {
+		return fmt.Errorf("seeding user types: %w", result.Error)
+	}
+
+	log.Printf("User types seeded (%d)", len(records))
 	return nil
 }
 
 func (s *Seeder) seedPermissionTypes(ctx context.Context) error {
-	count := 0
+	var records []users.PermissionType
 	for resource, actions := range permissionTypes {
 		for _, action := range actions {
-			name := resource + "." + action
-
-			result := s.db.WithContext(ctx).
-				Where(users.PermissionType{Name: name}).
-				FirstOrCreate(&users.PermissionType{Name: name})
-
-			if result.Error != nil {
-				return fmt.Errorf("upserting permission type %q: %w", name, result.Error)
-			}
-			count++
+			records = append(records, users.PermissionType{
+				Name: resource + "." + action,
+			})
 		}
 	}
 
-	log.Printf("Permission types seeded (%d)", count)
+	result := s.db.WithContext(ctx).
+		Clauses(clause.OnConflict{DoNothing: true}).
+		Create(&records)
+
+	if result.Error != nil {
+		return fmt.Errorf("seeding permission types: %w", result.Error)
+	}
+
+	log.Printf("Permission types seeded (%d)", len(records))
 	return nil
 }
 
 func (s *Seeder) seedPermissions(ctx context.Context) error {
-	count := 0
-	for roleName, perms := range rolePermissions {
+	var permTypes []users.PermissionType
+	if err := s.db.WithContext(ctx).Find(&permTypes).Error; err != nil {
+		return fmt.Errorf("loading permission types: %w", err)
+	}
 
-		var userType users.UserType
-		if err := s.db.WithContext(ctx).
-			Where("name = ?", roleName).
-			First(&userType).Error; err != nil {
-			return fmt.Errorf("finding user type %q: %w", roleName, err)
-		}
+	permTypeIDs := make(map[string]uint, len(permTypes))
+	for _, pt := range permTypes {
+		permTypeIDs[pt.Name] = pt.ID
+	}
 
+	var toInsert []users.Permission
+	for roleID, perms := range rolePermissions {
 		for _, permName := range perms {
-
-			var permType users.PermissionType
-			if err := s.db.WithContext(ctx).
-				Where("name = ?", permName).
-				First(&permType).Error; err != nil {
-				return fmt.Errorf("finding permission type %q: %w", permName, err)
+			ptID, ok := permTypeIDs[permName]
+			if !ok {
+				return fmt.Errorf("unknown permission type %q — did seedPermissionTypes run?", permName)
 			}
-
-			result := s.db.WithContext(ctx).
-				Where(users.Permission{
-					UserTypeID:       userType.ID,
-					PermissionTypeID: permType.ID,
-				}).
-				FirstOrCreate(&users.Permission{
-					UserTypeID:       userType.ID,
-					PermissionTypeID: permType.ID,
-				})
-
-			if result.Error != nil {
-				return fmt.Errorf(
-					"linking %q -> %q: %w",
-					roleName, permName, result.Error,
-				)
-			}
-			count++
+			toInsert = append(toInsert, users.Permission{
+				UserTypeID:       uint(roleID),
+				PermissionTypeID: ptID,
+			})
 		}
 	}
 
-	log.Printf("Permissions seeded (%d links)", count)
+	result := s.db.WithContext(ctx).
+		Clauses(clause.OnConflict{DoNothing: true}).
+		Create(&toInsert)
+
+	if result.Error != nil {
+		return fmt.Errorf("inserting permissions: %w", result.Error)
+	}
+
+	log.Printf("Permissions seeded (%d links)", len(toInsert))
 	return nil
 }
