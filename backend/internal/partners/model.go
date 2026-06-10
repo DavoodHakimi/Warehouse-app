@@ -24,5 +24,6 @@ type BusinessPartner struct {
 
 type BusinessPartnerType struct {
 	gorm.Model
-	Name string `gorm:"unique; not null" json:"name"`
+	Name        string `gorm:"unique; not null" json:"name"`
+	PersianName string `gorm:"unique" json:"persian_name"`
 }
