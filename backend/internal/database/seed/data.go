@@ -8,11 +8,11 @@ type UserType struct {
 }
 
 var userTypes = []UserType{
-	{Name: "CEO", PersianName: "مدیر", Description: "مدیر همه"},
-	{Name: "Warehouse Manager", PersianName: "سرپرست انبار", Description: ""},
-	{Name: "Storeman-Full", PersianName: "انبار دار", Description: ""},
-	{Name: "Storeman-EnterOnly", PersianName: "انباردار- ورود", Description: ""},
-	{Name: "Storeman-ExitOnly", PersianName: "انباردار- خروج", Description: ""},
+	{ID: 1, Name: "CEO", PersianName: "مدیر", Description: "مدیر همه"},
+	{ID: 2, Name: "Warehouse Manager", PersianName: "سرپرست انبار", Description: ""},
+	{ID: 3, Name: "Storeman-Full", PersianName: "انبار دار", Description: ""},
+	{ID: 4, Name: "Storeman-EnterOnly", PersianName: "انباردار- ورود", Description: ""},
+	{ID: 5, Name: "Storeman-ExitOnly", PersianName: "انباردار- خروج", Description: ""},
 }
 
 var permissionTypes = map[string][]string{
