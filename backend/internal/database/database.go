@@ -80,14 +80,17 @@ func RunMigrations(db *gorm.DB) error {
 }
 
 func HasAccess(db *gorm.DB, userID int, permission string) bool {
-	count := 0
-	// query := `
-	// SELECT count(u.ID)
-	// FROM users as u
-	// LEFT JOIN permissions as p ON p.user_id = u.id
-	// LEFT JOIN permission_types as pt on pt.id = p.permission_type_id
-	// where pt.name = ? and u.id = ?
-	// `
+	var count int64
+
+	err := db.
+		Model(&users.User{}).
+		Joins("LEFT JOIN permissions p ON p.user_type_id = users.user_type_id").
+		Joins("LEFT JOIN permission_types pt ON pt.id = p.permission_type_id").
+		Where("pt.name = ? AND users.id = ?", permission, userID).
+		Count(&count).Error
+	if err != nil {
+		return false
+	}
 
 	return count > 0
 }
