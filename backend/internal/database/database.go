@@ -55,10 +55,9 @@ func initDB() {
 	fmt.Println("Sucessfully connected to DB!")
 }
 
-func RunMigrations() error {
-	dbObj := GetDB()
+func RunMigrations(db *gorm.DB) error {
 
-	err := dbObj.AutoMigrate(
+	err := db.AutoMigrate(
 		&company.Company{},
 		&users.User{},
 		&users.UserType{},
@@ -78,4 +77,17 @@ func RunMigrations() error {
 
 	fmt.Println("Database migration completed successfully!")
 	return nil
+}
+
+func HasAccess(db *gorm.DB, userID int, permission string) bool {
+	count := 0
+	// query := `
+	// SELECT count(u.ID)
+	// FROM users as u
+	// LEFT JOIN permissions as p ON p.user_id = u.id
+	// LEFT JOIN permission_types as pt on pt.id = p.permission_type_id
+	// where pt.name = ? and u.id = ?
+	// `
+
+	return count > 0
 }

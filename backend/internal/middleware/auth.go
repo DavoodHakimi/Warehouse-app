@@ -7,7 +7,16 @@ import (
 	"github.com/DavoodHakimi/warehouse-app/internal/auth"
 	"github.com/DavoodHakimi/warehouse-app/internal/database"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
+
+type RBAC struct {
+	db *gorm.DB
+}
+
+func NewRBAC(db *gorm.DB) *RBAC {
+	return &RBAC{db: db}
+}
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -37,7 +46,7 @@ func AuthMiddleware() gin.HandlerFunc {
 	}
 }
 
-func RBACMiddleware(permission string) gin.HandlerFunc {
+func (r *RBAC) RBACMiddleware(permission string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID, exists := c.Get("user_id")
 		if !exists {
@@ -45,7 +54,7 @@ func RBACMiddleware(permission string) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		if !database.HasAccess(userID.(int), permission) {
+		if !database.HasAccess(r.db, userID.(int), permission) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Permission denied"})
 			c.Abort()
 			return
