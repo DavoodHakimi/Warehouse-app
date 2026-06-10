@@ -7,6 +7,17 @@ type UserType struct {
 	Description string
 }
 
+type BusinessPartnerType struct {
+	Name        string
+	PersianName string
+}
+
+var partnerTypes = []BusinessPartnerType{
+	{Name: "Supplier", PersianName: "تامین کننده"},
+	{Name: "Customer", PersianName: "خریدار"},
+	{Name: "Both", PersianName: "خریدار/ فروشنده"},
+}
+
 var userTypes = []UserType{
 	{ID: 1, Name: "CEO", PersianName: "مدیر", Description: "مدیر همه"},
 	{ID: 2, Name: "Warehouse Manager", PersianName: "سرپرست انبار", Description: ""},

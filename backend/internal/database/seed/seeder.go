@@ -22,6 +22,9 @@ func NewSeeder(db *gorm.DB) *Seeder {
 func (s *Seeder) Run(ctx context.Context) error {
 	log.Println("Running database seeder...")
 
+	if err := s.seedPartnerTypes(ctx); err != nil {
+		return fmt.Errorf("seeding Partner types: %w", err)
+	}
 	if err := s.seedUserTypes(ctx); err != nil {
 		return fmt.Errorf("seeding user types: %w", err)
 	}
@@ -33,6 +36,22 @@ func (s *Seeder) Run(ctx context.Context) error {
 	}
 
 	log.Println("Seeding complete.")
+	return nil
+}
+
+func (s *Seeder) seedPartnerTypes(ctx context.Context) error {
+	records := make([]BusinessPartnerType, len(partnerTypes))
+	for _, partnerType := range partnerTypes {
+		records = append(records, partnerType)
+	}
+	result := s.db.WithContext(ctx).
+		Clauses(clause.OnConflict{DoNothing: true}).
+		Create(&records)
+
+	if result.Error != nil {
+		return fmt.Errorf("seeding user types: %w", result.Error)
+	}
+	log.Printf("Partner types seeded (%d)", len(records))
 	return nil
 }
 
