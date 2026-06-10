@@ -15,14 +15,13 @@ func NewHandler(service *Service) *Handler {
 }
 
 func (h *Handler) AllProductsHandler(c *gin.Context) {
-	userRole, exist := c.Get("role")
-	if !exist || userRole != 1 {
+	userCompanyID, exist := c.Get("company_id")
+	if !exist {
 		c.JSON(http.StatusForbidden, gin.H{
 			"error": "you don't have access to this page",
 		})
 		return
 	}
-	userCompanyID, _ := c.Get("company_id")
 	allProducts, err := h.service.AllProducts(userCompanyID.(int))
 
 	if err != nil {
