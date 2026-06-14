@@ -127,13 +127,9 @@ func (s *Service) modifiedFields(o *UpdateOrderRequest) map[string][2]string {
 	return changes
 }
 
-func (s *Service) DeleteOrder(orderID string) error {
-	val, err := strconv.Atoi(orderID)
-	if err != nil {
-		return errors.New("Invalid Order ID")
-	}
+func (s *Service) DeleteOrder(orderID uint) error {
 
-	order, err := s.repo.FindByID(uint(val))
+	order, err := s.repo.FindByID(orderID)
 	if err != nil {
 		return errors.New("Order Not found")
 	}
