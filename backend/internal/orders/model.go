@@ -10,16 +10,17 @@ import (
 // defining DB Types
 type Currency struct {
 	gorm.Model
-	Name string `gorm:"unique; not null" json:"name"`
+	Name string `gorm:"unique;not null" json:"name"`
 }
 
 type Order struct {
 	gorm.Model
-	OrderType         string  `gorm:"not null;check:order_type IN ('sale','purchsae')" json:"order_type"`
+	OrderType         string  `gorm:"not null;check:order_type IN ('sale','purchase')" json:"order_type"`
 	OrderNumber       string  `gorm:"uniqueIndex" json:"order_number"`
-	CompanyID         uint    `json:"company_id"`
-	BusinessPartnerID uint    `json:"business_partner_id"`
-	CurrencyID        uint    `json:"currency_id"`
+	CompanyID         uint    `gorm:"not null" json:"company_id"`
+	Status            string  `gorm:"not null;check:status IN ('Pending','Approved','Shipped','Packed','Received','Canceled')" json:"status"`
+	BusinessPartnerID uint    `gorm:"not null" json:"business_partner_id"`
+	CurrencyID        uint    `gorm:"not null" json:"currency_id"`
 	ExchangeRate      float64 `gorm:"type:decimal(10,4);default:1.0" json:"exchange_rate"`
 
 	// Relationships
@@ -35,7 +36,6 @@ type OrderItem struct {
 	OrderID      uint    `json:"order_id"`
 	Quantity     int     `gorm:"not null" json:"quantity"`
 	PerItemPrice float64 `gorm:"type:decimal(10,2)" json:"per_item_price"`
-	Amount       float64 `gorm:"type:decimal(10,2)" json:"amount"`
 
 	// Relationships
 	Product products.Product `gorm:"foreignKey:ProductID" json:"product,omitempty"`
