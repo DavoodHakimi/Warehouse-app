@@ -3,6 +3,7 @@ package router
 import (
 	"github.com/DavoodHakimi/warehouse-app/internal/auth"
 	"github.com/DavoodHakimi/warehouse-app/internal/middleware"
+	"github.com/DavoodHakimi/warehouse-app/internal/orders"
 	"github.com/DavoodHakimi/warehouse-app/internal/partners"
 	"github.com/DavoodHakimi/warehouse-app/internal/products"
 	"github.com/DavoodHakimi/warehouse-app/internal/users"
@@ -47,15 +48,19 @@ func Setup(db *gorm.DB) *gin.Engine {
 
 			ordersGroup := protected.Group("/orders")
 			{
-				ordersGroup.GET("/", rbac.RBACMiddleware("orders.read"))
-				ordersGroup.GET("/:orderID", rbac.RBACMiddleware("orders.read"))
-				ordersGroup.POST("/", rbac.RBACMiddleware("orders.create"))
-				ordersGroup.PATCH("/:orderID", rbac.RBACMiddleware("orders.update"))
-				ordersGroup.DELETE("/:orderID", rbac.RBACMiddleware("orders.delete"))
-				ordersGroup.POST("/:orderID/approve", rbac.RBACMiddleware("orders.update"))
-				ordersGroup.POST("/:orderID/pack", rbac.RBACMiddleware("orders.pack"))
-				ordersGroup.POST("/:orderID/ship", rbac.RBACMiddleware("orders.ship"))
-				ordersGroup.POST("/:orderID/receive", rbac.RBACMiddleware("orders.receive"))
+				orderRepo := orders.NewRepository(db)
+				orderService := orders.NewService(orderRepo)
+				orderHandler := orders.NewHandler(orderService)
+
+				ordersGroup.GET("/", rbac.RBACMiddleware("orders.read"), orderHandler.AllOrdersHandler)
+				ordersGroup.GET("/:orderID", rbac.RBACMiddleware("orders.read"), orderHandler.OrderInfoHandler)
+				ordersGroup.POST("/", rbac.RBACMiddleware("orders.create"), orderHandler.OrderCreationHandler)
+				ordersGroup.PATCH("/:orderID", rbac.RBACMiddleware("orders.update"), orderHandler.OrderUpdateHandler)
+				ordersGroup.DELETE("/:orderID", rbac.RBACMiddleware("orders.delete"), orderHandler.OrderDeleteHandler)
+				ordersGroup.POST("/:orderID/approve", rbac.RBACMiddleware("orders.update"), orderHandler.OrderApproveHandler)
+				ordersGroup.POST("/:orderID/pack", rbac.RBACMiddleware("orders.pack"), orderHandler.OrderPackHandler)
+				ordersGroup.POST("/:orderID/ship", rbac.RBACMiddleware("orders.ship"), orderHandler.OrderShipHandler)
+				ordersGroup.POST("/:orderID/receive", rbac.RBACMiddleware("orders.receive"), orderHandler.OrderReceiveHandler)
 			}
 
 			productsGroup := protected.Group("/products")
