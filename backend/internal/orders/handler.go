@@ -22,23 +22,82 @@ func (h *Handler) AllOrdersHandler(c *gin.Context) {
 		})
 		return
 	}
-	h.service.AllOrders(userCompanyID.(int))
+	allOrders, err := h.service.AllOrders(userCompanyID.(int))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, *allOrders)
 }
 
 func (h *Handler) OrderInfoHandler(c *gin.Context) {
 	orderId := c.Param("orderID")
-	h.service.ReadOrder(orderId)
+	order, err := h.service.ReadOrder(orderId)
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, *order)
 
 }
 
 func (h *Handler) OrderCreationHandler(c *gin.Context) {
+	var req CreateOrderRequest
 
-	h.service.CreateOrder()
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Validation Failed.",
+			"details": err.Error(),
+		})
+	}
+	comapnyID, _ := c.Get("company_id")
+	err := h.service.CreateOrder(&req, comapnyID.(int))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "Product created succesfully",
+	})
 }
 
 func (h *Handler) OrderUpdateHandler(c *gin.Context) {
-	orderId := c.Param("orderID")
-	h.service.UpdateOrder(&UpdateOrderRequest{}, orderId)
+	var req UpdateOrderRequest
+	userID, exist := c.Get("user_id")
+
+	if !exist {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "Unauthorized",
+		})
+		return
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Validation Failed.",
+			"details": err.Error(),
+		})
+		return
+	}
+	err := h.service.UpdateOrder(&req, userID.(int))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Order updated succesfully",
+	})
 
 }
 
@@ -51,23 +110,76 @@ func (h *Handler) OrderDeleteHandler(c *gin.Context) {
 		})
 		return
 	}
-	h.service.DeleteOrder(order.ID)
+	err = h.service.DeleteOrder(order.ID)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Order deleted succesfully",
+	})
 
 }
 
 func (h *Handler) OrderApproveHandler(c *gin.Context) {
 	orderId := c.Param("orderID")
+	err := h.service.Approve(orderId)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Order status changed to Approved Successfully",
+	})
 
 }
 func (h *Handler) OrderPackHandler(c *gin.Context) {
 	orderId := c.Param("orderID")
+	err := h.service.Approve(orderId)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
 
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Order status changed to Packed Successfully",
+	})
 }
 func (h *Handler) OrderShipHandler(c *gin.Context) {
 	orderId := c.Param("orderID")
+	err := h.service.Approve(orderId)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Order status changed to Shipped Successfully",
+	})
 
 }
 func (h *Handler) OrderReceiveHandler(c *gin.Context) {
 	orderId := c.Param("orderID")
+	err := h.service.Approve(orderId)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
 
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Order status changed to Received Successfully",
+	})
 }
