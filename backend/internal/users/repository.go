@@ -15,7 +15,7 @@ func NewRepository(db *gorm.DB) *Repository {
 func (r *Repository) ReadCompanyUsers(companyID int) ([]User, error) {
 
 	var users []User
-	res := r.db.Where("comnpany_id = ?", companyID).Find(&users)
+	res := r.db.Where("company_id = ?", companyID).Find(&users)
 	if res.Error != nil {
 
 		return nil, res.Error

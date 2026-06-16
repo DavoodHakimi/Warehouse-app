@@ -155,7 +155,7 @@ func (s *Service) Pack(orderID string) error {
 		return err
 	}
 
-	if order.Status != "Approved" || order.OrderType != "Sale" {
+	if order.Status != "Approved" || order.OrderType != "sale" {
 		return errors.New("This Order status can not changed to Packed.")
 	}
 	return s.repo.StatusUpdate(uint(val), "Packed")
@@ -167,7 +167,7 @@ func (s *Service) Ship(orderID string) error {
 		return err
 	}
 
-	if order.Status != "Packed" || order.OrderType != "Sale" {
+	if order.Status != "Packed" || order.OrderType != "sale" {
 		return errors.New("This Order status can not changed to Shipped.")
 	}
 	return s.repo.StatusUpdate(uint(val), "Shipped")

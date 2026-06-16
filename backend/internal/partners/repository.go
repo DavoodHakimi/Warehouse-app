@@ -15,7 +15,7 @@ func NewRepository(db *gorm.DB) *Repository {
 func (r *Repository) ReadCompanyPartners(companyID int) ([]BusinessPartner, error) {
 
 	var partners []BusinessPartner
-	res := r.db.Where("comnpany_id = ?", companyID).Find(&partners)
+	res := r.db.Where("company_id = ?", companyID).Find(&partners)
 	if res.Error != nil {
 
 		return nil, res.Error
@@ -50,7 +50,7 @@ func (r *Repository) Update(partner *BusinessPartner) error {
 			"phone_number":         partner.PhoneNumber,
 			"partner_type_id":      partner.BusinessPartnerTypeID,
 			"contact_name":         partner.ContactName,
-			"contant_phone_number": partner.ContactPhoneNumber,
+			"contact_phone_number": partner.ContactPhoneNumber,
 		}).Error
 	})
 }

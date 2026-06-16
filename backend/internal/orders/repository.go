@@ -13,7 +13,7 @@ func NewRepository(db *gorm.DB) *Repository {
 func (r *Repository) ReadCompanyOrders(companyID int) ([]Order, error) {
 
 	var orders []Order
-	res := r.db.Joins("BusinessPartner").Joins("Currency").Where("comnpany_id = ?", companyID).Find(&orders)
+	res := r.db.Joins("BusinessPartner").Joins("Currency").Where("company_id = ?", companyID).Find(&orders)
 	if res.Error != nil {
 
 		return nil, res.Error

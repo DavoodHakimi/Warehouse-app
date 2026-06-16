@@ -142,7 +142,7 @@ func (h *Handler) OrderApproveHandler(c *gin.Context) {
 }
 func (h *Handler) OrderPackHandler(c *gin.Context) {
 	orderId := c.Param("orderID")
-	err := h.service.Approve(orderId)
+	err := h.service.Pack(orderId)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"message": err.Error(),
@@ -156,7 +156,7 @@ func (h *Handler) OrderPackHandler(c *gin.Context) {
 }
 func (h *Handler) OrderShipHandler(c *gin.Context) {
 	orderId := c.Param("orderID")
-	err := h.service.Approve(orderId)
+	err := h.service.Ship(orderId)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"message": err.Error(),
@@ -171,7 +171,7 @@ func (h *Handler) OrderShipHandler(c *gin.Context) {
 }
 func (h *Handler) OrderReceiveHandler(c *gin.Context) {
 	orderId := c.Param("orderID")
-	err := h.service.Approve(orderId)
+	err := h.service.Receive(orderId)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"message": err.Error(),
