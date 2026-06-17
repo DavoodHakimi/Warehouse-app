@@ -18,7 +18,7 @@ type Order struct {
 	OrderType         string  `gorm:"not null;check:order_type IN ('sale','purchase')" json:"order_type"`
 	OrderNumber       string  `gorm:"uniqueIndex" json:"order_number"`
 	CompanyID         uint    `gorm:"not null" json:"company_id"`
-	Status            string  `gorm:"not null;check:status IN ('Pending','Approved','Shipped','Packed','Received','Canceled')" json:"status"`
+	Status            string  `gorm:"not null;check:status IN ('Pending','Approved','Shipped','Packed','Waiting','Received','Canceled')" json:"status"`
 	BusinessPartnerID uint    `gorm:"not null" json:"business_partner_id"`
 	CurrencyID        uint    `gorm:"not null" json:"currency_id"`
 	ExchangeRate      float64 `gorm:"type:decimal(10,4);default:1.0" json:"exchange_rate"`
