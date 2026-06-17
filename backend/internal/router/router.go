@@ -61,6 +61,8 @@ func Setup(db *gorm.DB) *gin.Engine {
 				ordersGroup.POST("/:orderID/pack", rbac.RBACMiddleware("orders.pack"), orderHandler.OrderPackHandler)
 				ordersGroup.POST("/:orderID/ship", rbac.RBACMiddleware("orders.ship"), orderHandler.OrderShipHandler)
 				ordersGroup.POST("/:orderID/receive", rbac.RBACMiddleware("orders.receive"), orderHandler.OrderReceiveHandler)
+				ordersGroup.POST("/:orderID/wait", rbac.RBACMiddleware("orders.update"), orderHandler.OrderWaitingHandler)
+				ordersGroup.POST("/:orderID/cancel", rbac.RBACMiddleware("orders.update"), orderHandler.OrderCancelHandler)
 			}
 
 			productsGroup := protected.Group("/products")

@@ -183,3 +183,33 @@ func (h *Handler) OrderReceiveHandler(c *gin.Context) {
 		"message": "Order status changed to Received Successfully",
 	})
 }
+
+func (h *Handler) OrderWaitingHandler(c *gin.Context) {
+	orderId := c.Param("orderID")
+	err := h.service.MarkWaiting(orderId)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Order status changed to Waiting Successfully",
+	})
+}
+
+func (h *Handler) OrderCancelHandler(c *gin.Context) {
+	orderId := c.Param("orderID")
+	err := h.service.Cancel(orderId)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Order status changed to Canceled Successfully",
+	})
+}
