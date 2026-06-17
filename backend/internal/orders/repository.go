@@ -1,6 +1,13 @@
 package orders
 
-import "gorm.io/gorm"
+import (
+	"errors"
+	"fmt"
+
+	"github.com/DavoodHakimi/warehouse-app/internal/audit"
+	"github.com/DavoodHakimi/warehouse-app/internal/products"
+	"gorm.io/gorm"
+)
 
 type Repository struct {
 	db *gorm.DB
@@ -23,7 +30,7 @@ func (r *Repository) ReadCompanyOrders(companyID int) ([]Order, error) {
 
 func (r *Repository) FindByID(orderID uint) (*Order, error) {
 	var order Order
-	res := r.db.Joins("BusinessPartner").Joins("Currency").First(&order, orderID)
+	res := r.db.Joins("BusinessPartner").Joins("Currency").Preload("OrderItems").First(&order, orderID)
 	if res.Error != nil {
 		return nil, res.Error
 	}
@@ -68,4 +75,90 @@ func (r *Repository) StatusUpdate(orderID uint, newStatus string) error {
 			"status": newStatus,
 		}).Error
 	})
+}
+
+func (r *Repository) RecordAudit(log *audit.Log) {
+	audit.Record(r.db, log)
+}
+
+func (r *Repository) ApproveSaleTransaction(orderID uint, items []OrderItem) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		for _, item := range items {
+			if err := r.Reserve(tx, item.ProductID, item.Quantity); err != nil {
+				return err
+			}
+		}
+		return tx.Model(&Order{}).Where("id = ?", orderID).Update("status", "Approved").Error
+	})
+}
+
+func (r *Repository) ShipSaleTransaction(orderID uint, items []OrderItem) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		for _, item := range items {
+			if err := r.Fulfill(tx, item.ProductID, item.Quantity); err != nil {
+				return err
+			}
+		}
+		return tx.Model(&Order{}).Where("id = ?", orderID).Update("status", "Shipped").Error
+	})
+}
+
+func (r *Repository) ReceivePurchaseTransaction(orderID uint, items []OrderItem) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		for _, item := range items {
+			if err := r.ReceiveStock(tx, item.ProductID, item.Quantity); err != nil {
+				return err
+			}
+		}
+		return tx.Model(&Order{}).Where("id = ?", orderID).Update("status", "Received").Error
+	})
+}
+
+func (r *Repository) CancelSaleTransaction(orderID uint, items []OrderItem) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		for _, item := range items {
+			if err := r.Release(tx, item.ProductID, item.Quantity); err != nil {
+				return err
+			}
+		}
+		return tx.Model(&Order{}).Where("id = ?", orderID).Update("status", "Canceled").Error
+	})
+}
+
+func (r *Repository) Reserve(tx *gorm.DB, productID uint, amount int) error {
+	return adjustStock(tx, productID, -amount, amount)
+}
+
+func (r *Repository) Release(tx *gorm.DB, productID uint, amount int) error {
+	return adjustStock(tx, productID, amount, -amount)
+}
+
+func (r *Repository) Fulfill(tx *gorm.DB, productID uint, amount int) error {
+	return adjustStock(tx, productID, 0, -amount)
+}
+
+func (r *Repository) ReceiveStock(tx *gorm.DB, productID uint, amount int) error {
+	return adjustStock(tx, productID, amount, 0)
+}
+
+func adjustStock(tx *gorm.DB, productID uint, deltaAvail, deltaRes int) error {
+	var stock products.Stock
+	err := tx.Where("product_id = ?", productID).First(&stock).Error
+	if err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+		stock = products.Stock{ProductID: productID, AvailableStock: 0, ReservedStock: 0}
+	}
+
+	stock.AvailableStock += deltaAvail
+	stock.ReservedStock += deltaRes
+	if stock.AvailableStock < 0 {
+		return fmt.Errorf("insufficient available stock for product %d: need %d", productID, -deltaAvail)
+	}
+	if stock.ReservedStock < 0 {
+		return fmt.Errorf("insufficient reserved stock for product %d: need %d", productID, -deltaRes)
+	}
+
+	return tx.Save(&stock).Error
 }

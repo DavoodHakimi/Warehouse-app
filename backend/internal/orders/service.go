@@ -100,7 +100,7 @@ func (s *Service) UpdateOrder(o *UpdateOrderRequest, userRequestedID int) error 
 			NewValue:   values[1],
 			ByUserID:   uint(userRequestedID),
 		}
-		audit.Record(s.repo.db, &log)
+		s.repo.RecordAudit(&log)
 	}
 	return nil
 }
@@ -146,6 +146,10 @@ func (s *Service) Approve(orderID string) error {
 	if order.Status != "Pending" {
 		return errors.New("This Order status can not changed to approve.")
 	}
+
+	if order.OrderType == "sale" {
+		return s.repo.ApproveSaleTransaction(uint(val), order.OrderItems)
+	}
 	return s.repo.StatusUpdate(uint(val), "Approved")
 }
 
@@ -170,7 +174,20 @@ func (s *Service) Ship(orderID string) error {
 	if order.Status != "Packed" || order.OrderType != "sale" {
 		return errors.New("This Order status can not changed to Shipped.")
 	}
-	return s.repo.StatusUpdate(uint(val), "Shipped")
+
+	return s.repo.ShipSaleTransaction(uint(val), order.OrderItems)
+}
+
+func (s *Service) MarkWaiting(orderID string) error {
+	order, val, err := s.CheckOrderExist(orderID)
+	if err != nil {
+		return err
+	}
+
+	if order.Status != "Approved" || order.OrderType != "purchase" {
+		return errors.New("This Order status can not changed to Waiting.")
+	}
+	return s.repo.StatusUpdate(uint(val), "Waiting")
 }
 
 func (s *Service) Receive(orderID string) error {
@@ -179,10 +196,29 @@ func (s *Service) Receive(orderID string) error {
 		return err
 	}
 
-	if order.Status != "Approved" || order.OrderType != "purchase" {
-		return errors.New("This Order status can not changed to Approved.")
+	if order.Status != "Waiting" || order.OrderType != "purchase" {
+		return errors.New("This Order status can not changed to Received.")
 	}
-	return s.repo.StatusUpdate(uint(val), "Received")
+
+	return s.repo.ReceivePurchaseTransaction(uint(val), order.OrderItems)
+}
+
+func (s *Service) Cancel(orderID string) error {
+	order, val, err := s.CheckOrderExist(orderID)
+	if err != nil {
+		return err
+	}
+
+	if order.Status == "Canceled" {
+		return errors.New("This Order is already canceled.")
+	}
+
+	reserved := order.OrderType == "sale" && (order.Status == "Approved" || order.Status == "Packed")
+	if !reserved {
+		return s.repo.StatusUpdate(uint(val), "Canceled")
+	}
+
+	return s.repo.CancelSaleTransaction(uint(val), order.OrderItems)
 }
 
 func (s *Service) CheckOrderExist(orderID string) (*Order, int, error) {
