@@ -23,7 +23,7 @@ func setupService(t *testing.T) (*Service, *gorm.DB) {
 		&Order{}, &OrderItem{}, &Currency{},
 		&company.Company{},
 		&partners.BusinessPartner{}, &partners.BusinessPartnerType{},
-		&products.Product{},
+		&products.Product{}, &products.Stock{},
 		&audit.Log{},
 	)
 	repo := NewRepository(db)
@@ -164,9 +164,9 @@ func TestService_Ship_RejectsNonPacked(t *testing.T) {
 	assert.Contains(t, err.Error(), "can not changed to Shipped")
 }
 
-func TestService_Receive_FromApprovedPurchase(t *testing.T) {
+func TestService_Receive_FromWaitingPurchase(t *testing.T) {
 	svc, db := setupService(t)
-	o := seedOrder(t, db, "purchase", "Approved")
+	o := seedOrder(t, db, "purchase", "Waiting")
 
 	require.NoError(t, svc.Receive(itoa(o.ID)))
 	got, err := svc.ReadOrder(itoa(o.ID))
@@ -176,11 +176,188 @@ func TestService_Receive_FromApprovedPurchase(t *testing.T) {
 
 func TestService_Receive_RejectsWrongType(t *testing.T) {
 	svc, db := setupService(t)
-	o := seedOrder(t, db, "sale", "Approved") // Receive requires "purchase"
+	o := seedOrder(t, db, "sale", "Waiting") // Receive requires "purchase"
 
 	err := svc.Receive(itoa(o.ID))
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "can not changed to Approved")
+	assert.Contains(t, err.Error(), "can not changed to Received")
+}
+
+// seedProductWithStock creates a product and a stock row with the given
+// available/reserved amounts, returning the product ID.
+func seedProductWithStock(t *testing.T, db *gorm.DB, compID uint, avail, reserved int) uint {
+	t.Helper()
+	prod := products.Product{Name: "Widget", ProductNumber: "P" + itoa(uint(avail*100+reserved)), CompanyID: compID}
+	require.NoError(t, db.Create(&prod).Error)
+	require.NoError(t, db.Create(&products.Stock{
+		ProductID: prod.ID, AvailableStock: avail, ReservedStock: reserved,
+	}).Error)
+	return prod.ID
+}
+
+// stockOf reads a product's current stock row.
+func stockOf(t *testing.T, db *gorm.DB, productID uint) products.Stock {
+	t.Helper()
+	var st products.Stock
+	require.NoError(t, db.Where("product_id = ?", productID).First(&st).Error)
+	return st
+}
+
+// seedOrderWithItem creates and persists an order of the given type/status with
+// a single line item of qty units of prodID. Refs (company/partner/currency)
+// are passed in so callers can reuse them for product+stock seeding.
+func seedOrderWithItem(t *testing.T, db *gorm.DB, compID, bpID, curID uint, orderType, status string, prodID uint, qty int) Order {
+	t.Helper()
+	o := makeOrder(compID, bpID, curID, orderType, status)
+	o.OrderNumber = "ORD-" + itoa(uint(statusSeq()))
+	o.OrderItems = []OrderItem{{ProductID: prodID, Quantity: qty, PerItemPrice: 10}}
+	require.NoError(t, db.Create(&o).Error)
+	return o
+}
+
+// --- Sale stock transitions ---
+
+func TestService_Approve_SaleReservesStock(t *testing.T) {
+	svc, db := setupService(t)
+	compID, bpID, curID := seedRefs(t, db)
+	prodID := seedProductWithStock(t, db, compID, 10, 0)
+	o := seedOrderWithItem(t, db, compID, bpID, curID, "sale", "Pending", prodID, 4)
+
+	require.NoError(t, svc.Approve(itoa(o.ID)))
+
+	got, err := svc.ReadOrder(itoa(o.ID))
+	require.NoError(t, err)
+	assert.Equal(t, "Approved", got.Status)
+
+	st := stockOf(t, db, prodID)
+	assert.Equal(t, 6, st.AvailableStock) // 10 - 4
+	assert.Equal(t, 4, st.ReservedStock)  // 0 + 4
+}
+
+func TestService_Approve_SaleInsufficientStockRollsBack(t *testing.T) {
+	svc, db := setupService(t)
+	compID, bpID, curID := seedRefs(t, db)
+	prodID := seedProductWithStock(t, db, compID, 2, 0) // only 2 available
+	o := seedOrderWithItem(t, db, compID, bpID, curID, "sale", "Pending", prodID, 5)
+
+	err := svc.Approve(itoa(o.ID))
+	require.Error(t, err)
+
+	// Status stayed Pending and stock is untouched.
+	got, err := svc.ReadOrder(itoa(o.ID))
+	require.NoError(t, err)
+	assert.Equal(t, "Pending", got.Status)
+	st := stockOf(t, db, prodID)
+	assert.Equal(t, 2, st.AvailableStock)
+	assert.Equal(t, 0, st.ReservedStock)
+}
+
+func TestService_Ship_FulfillsReserved(t *testing.T) {
+	svc, db := setupService(t)
+	compID, bpID, curID := seedRefs(t, db)
+	prodID := seedProductWithStock(t, db, compID, 0, 4) // already reserved
+	o := seedOrderWithItem(t, db, compID, bpID, curID, "sale", "Packed", prodID, 4)
+
+	require.NoError(t, svc.Ship(itoa(o.ID)))
+
+	got, err := svc.ReadOrder(itoa(o.ID))
+	require.NoError(t, err)
+	assert.Equal(t, "Shipped", got.Status)
+	st := stockOf(t, db, prodID)
+	assert.Equal(t, 0, st.AvailableStock)
+	assert.Equal(t, 0, st.ReservedStock) // 4 - 4
+}
+
+func TestService_Cancel_SaleApprovedReleasesReservation(t *testing.T) {
+	svc, db := setupService(t)
+	compID, bpID, curID := seedRefs(t, db)
+	prodID := seedProductWithStock(t, db, compID, 6, 4) // 4 reserved
+	o := seedOrderWithItem(t, db, compID, bpID, curID, "sale", "Approved", prodID, 4)
+
+	require.NoError(t, svc.Cancel(itoa(o.ID)))
+
+	got, err := svc.ReadOrder(itoa(o.ID))
+	require.NoError(t, err)
+	assert.Equal(t, "Canceled", got.Status)
+	st := stockOf(t, db, prodID)
+	assert.Equal(t, 10, st.AvailableStock) // 6 + 4 released
+	assert.Equal(t, 0, st.ReservedStock)   // 4 - 4
+}
+
+func TestService_Cancel_SalePendingNoStockChange(t *testing.T) {
+	svc, db := setupService(t)
+	compID, bpID, curID := seedRefs(t, db)
+	prodID := seedProductWithStock(t, db, compID, 10, 0) // nothing reserved yet
+	o := seedOrderWithItem(t, db, compID, bpID, curID, "sale", "Pending", prodID, 4)
+
+	require.NoError(t, svc.Cancel(itoa(o.ID)))
+
+	got, err := svc.ReadOrder(itoa(o.ID))
+	require.NoError(t, err)
+	assert.Equal(t, "Canceled", got.Status)
+	st := stockOf(t, db, prodID)
+	assert.Equal(t, 10, st.AvailableStock) // unchanged
+	assert.Equal(t, 0, st.ReservedStock)
+}
+
+func TestService_Cancel_AlreadyCanceled(t *testing.T) {
+	svc, db := setupService(t)
+	o := seedOrder(t, db, "sale", "Canceled")
+
+	err := svc.Cancel(itoa(o.ID))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already canceled")
+}
+
+// --- Purchase stock transitions ---
+
+func TestService_MarkWaiting_PurchaseFromApproved(t *testing.T) {
+	svc, db := setupService(t)
+	compID, bpID, curID := seedRefs(t, db)
+	prodID := seedProductWithStock(t, db, compID, 0, 0)
+	o := seedOrderWithItem(t, db, compID, bpID, curID, "purchase", "Approved", prodID, 5)
+
+	require.NoError(t, svc.MarkWaiting(itoa(o.ID)))
+
+	got, err := svc.ReadOrder(itoa(o.ID))
+	require.NoError(t, err)
+	assert.Equal(t, "Waiting", got.Status)
+	// no stock change on waiting
+	st := stockOf(t, db, prodID)
+	assert.Equal(t, 0, st.AvailableStock)
+	assert.Equal(t, 0, st.ReservedStock)
+}
+
+func TestService_Receive_PurchaseAddsStock(t *testing.T) {
+	svc, db := setupService(t)
+	compID, bpID, curID := seedRefs(t, db)
+	prodID := seedProductWithStock(t, db, compID, 3, 0)
+	o := seedOrderWithItem(t, db, compID, bpID, curID, "purchase", "Waiting", prodID, 5)
+
+	require.NoError(t, svc.Receive(itoa(o.ID)))
+
+	got, err := svc.ReadOrder(itoa(o.ID))
+	require.NoError(t, err)
+	assert.Equal(t, "Received", got.Status)
+	st := stockOf(t, db, prodID)
+	assert.Equal(t, 8, st.AvailableStock) // 3 + 5
+	assert.Equal(t, 0, st.ReservedStock)
+}
+
+func TestService_Cancel_PurchaseNoStockChange(t *testing.T) {
+	svc, db := setupService(t)
+	compID, bpID, curID := seedRefs(t, db)
+	prodID := seedProductWithStock(t, db, compID, 3, 0)
+	o := seedOrderWithItem(t, db, compID, bpID, curID, "purchase", "Waiting", prodID, 5)
+
+	require.NoError(t, svc.Cancel(itoa(o.ID)))
+
+	got, err := svc.ReadOrder(itoa(o.ID))
+	require.NoError(t, err)
+	assert.Equal(t, "Canceled", got.Status)
+	st := stockOf(t, db, prodID)
+	assert.Equal(t, 3, st.AvailableStock) // unchanged
+	assert.Equal(t, 0, st.ReservedStock)
 }
 
 func TestService_DeleteOrder(t *testing.T) {

@@ -20,7 +20,7 @@ func setupRepo(t *testing.T) (*Repository, *gorm.DB) {
 		&Order{}, &OrderItem{}, &Currency{},
 		&company.Company{},
 		&partners.BusinessPartner{}, &partners.BusinessPartnerType{},
-		&products.Product{},
+		&products.Product{}, &products.Stock{},
 	)
 	return NewRepository(db), db
 }
@@ -153,6 +153,54 @@ func TestRepository_Update(t *testing.T) {
 	assert.Equal(t, bp2.ID, stored.BusinessPartnerID)
 	assert.Equal(t, cur2.ID, stored.CurrencyID)
 	assert.Equal(t, 2.5, stored.ExchangeRate)
+}
+
+func TestRepository_StockOps(t *testing.T) {
+	repo, db := setupRepo(t)
+	compID, _, _ := seedRefs(t, db)
+	prod := products.Product{Name: "Widget", ProductNumber: "P1", CompanyID: compID}
+	require.NoError(t, db.Create(&prod).Error)
+
+	readStock := func() products.Stock {
+		var st products.Stock
+		require.NoError(t, db.Where("product_id = ?", prod.ID).First(&st).Error)
+		return st
+	}
+
+	// ReceiveStock creates the row on the fly (available↑).
+	require.NoError(t, repo.ReceiveStock(db, prod.ID, 10))
+	st := readStock()
+	assert.Equal(t, 10, st.AvailableStock) // row created at 0/0, then +10
+	assert.Equal(t, 0, st.ReservedStock)
+
+	// Reserve within available (available↓ reserved↑).
+	require.NoError(t, repo.Reserve(db, prod.ID, 6))
+	st = readStock()
+	assert.Equal(t, 4, st.AvailableStock)  // 10 - 6
+	assert.Equal(t, 6, st.ReservedStock)
+
+	// Fulfill on shipment (reserved↓).
+	require.NoError(t, repo.Fulfill(db, prod.ID, 6))
+	st = readStock()
+	assert.Equal(t, 4, st.AvailableStock)
+	assert.Equal(t, 0, st.ReservedStock) // 6 - 6 fulfilled
+
+	// Reserve again then Release it (cancellation: reserved↓ available↑).
+	require.NoError(t, repo.Reserve(db, prod.ID, 3))
+	require.NoError(t, repo.Release(db, prod.ID, 3))
+	st = readStock()
+	assert.Equal(t, 4, st.AvailableStock) // back to 4
+	assert.Equal(t, 0, st.ReservedStock)
+
+	// Negative available guard: reserving more than available fails.
+	err := repo.Reserve(db, prod.ID, 100)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "insufficient available stock")
+
+	// Negative reserved guard: fulfilling more than reserved fails.
+	err = repo.Fulfill(db, prod.ID, 100)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "insufficient reserved stock")
 }
 
 func TestRepository_ReadCompanyOrders(t *testing.T) {
