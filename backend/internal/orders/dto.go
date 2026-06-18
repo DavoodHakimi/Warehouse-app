@@ -1,7 +1,7 @@
 package orders
 
 type OrdersInfo struct {
-	orders []OrderInfoResponse
+	Orders []OrderInfoResponse `json:"orders"`
 }
 type OrderInfoResponse struct {
 	ID                  uint    `json:"id"`

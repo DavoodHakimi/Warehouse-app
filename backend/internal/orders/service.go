@@ -19,13 +19,13 @@ func NewService(repo *Repository) *Service {
 
 func (s *Service) AllOrders(cID int) (*OrdersInfo, error) {
 	orders, err := s.repo.ReadCompanyOrders(cID)
-	allOrders := OrdersInfo{orders: make([]OrderInfoResponse, 0, len(orders))}
+	allOrders := OrdersInfo{Orders: make([]OrderInfoResponse, 0, len(orders))}
 	if err != nil {
 		return nil, err
 	}
 
 	for _, item := range orders {
-		allOrders.orders = append(allOrders.orders, OrderInfoResponse{
+		allOrders.Orders = append(allOrders.Orders, OrderInfoResponse{
 			OrderType:           item.OrderType,
 			OrderNumber:         item.OrderNumber,
 			Status:              item.Status,
