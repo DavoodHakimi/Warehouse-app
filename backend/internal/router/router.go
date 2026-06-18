@@ -9,11 +9,21 @@ import (
 	"github.com/DavoodHakimi/warehouse-app/internal/users"
 	"gorm.io/gorm"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
 func Setup(db *gorm.DB) *gin.Engine {
 	routerEng := gin.Default()
+
+	config := cors.DefaultConfig()
+	config.AllowOrigins = []string{"http://localhost:3000", "http://frontend:3000"} // Your frontend URL
+	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"}
+	config.AllowHeaders = []string{"Origin", "Content-Type", "Authorization"}
+	config.AllowCredentials = true
+
+	routerEng.Use(cors.New(config))
+
 	v1 := routerEng.Group("/api/v1")
 	{
 		authGroup := v1.Group("/auth")
