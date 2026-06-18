@@ -1,7 +1,9 @@
 package middleware
 
 import (
+	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/DavoodHakimi/warehouse-app/internal/auth"
@@ -23,6 +25,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		tokenString := c.GetHeader("Authorization")
 
 		if tokenString == "" {
+			slog.Warn("auth - missing authorization header", "ip", c.ClientIP(), "path", c.FullPath())
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
 			c.Abort()
 			return
@@ -32,33 +35,47 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		claims, err := auth.ValidateToken(tokenString)
 		if err != nil {
+			slog.Warn("auth - invalid token", "ip", c.ClientIP(), "path", c.FullPath(), "error", err)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
 			c.Abort()
 			return
 		}
 
-		c.Set("role", claims["role"])
-		c.Set("user_id", claims["user_id"])
-		c.Set("username", claims["username"])
-		c.Set("company_id", claims["company_id"])
+		toInt := func(val interface{}) int {
+			switch v := val.(type) {
+			case float64:
+				return int(v)
+			case int:
+				return v
+			case string:
+				i, _ := strconv.Atoi(v)
+				return i
+			default:
+				return 0
+			}
+		}
 
+		c.Set("role", claims["role"])
+		c.Set("user_id", toInt(claims["user_id"]))
+		c.Set("username", claims["username"])
+		c.Set("company_id", toInt(claims["company_id"]))
+
+		slog.Info("auth - authenticated", "user_id", toInt(claims["user_id"]), "path", c.FullPath())
 		c.Next()
 	}
 }
 
 func (r *RBAC) RBACMiddleware(permission string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userID, exists := c.Get("user_id")
-		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found"})
-			c.Abort()
-			return
-		}
-		if !database.HasAccess(r.db, userID.(int), permission) {
+		userID := c.GetInt("user_id")
+
+		if !database.HasAccess(r.db, userID, permission) {
+			slog.Warn("rbac - permission denied", "user_id", userID, "permission", permission, "path", c.FullPath())
 			c.JSON(http.StatusForbidden, gin.H{"error": "Permission denied"})
 			c.Abort()
 			return
 		}
+		slog.Info("rbac - allowed", "user_id", userID, "permission", permission, "path", c.FullPath())
 		c.Next()
 	}
 }
