@@ -10,7 +10,8 @@ import (
 // defining DB Types
 type Currency struct {
 	gorm.Model
-	Name string `gorm:"unique;not null" json:"name"`
+	Name        string `gorm:"unique;not null" json:"name"`
+	PersianName string `gorm:"unique;not null" json:"persian_name"`
 }
 
 type Order struct {
