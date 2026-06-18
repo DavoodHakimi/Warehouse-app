@@ -22,6 +22,9 @@ func NewSeeder(db *gorm.DB) *Seeder {
 func (s *Seeder) Run(ctx context.Context) error {
 	log.Println("Running database seeder...")
 
+	if err := s.seedCurrencies(ctx); err != nil {
+		return fmt.Errorf("seeding Currencies: %w", err)
+	}
 	if err := s.seedPartnerTypes(ctx); err != nil {
 		return fmt.Errorf("seeding Partner types: %w", err)
 	}
@@ -36,6 +39,23 @@ func (s *Seeder) Run(ctx context.Context) error {
 	}
 
 	log.Println("Seeding complete.")
+	return nil
+}
+
+func (s *Seeder) seedCurrencies(ctx context.Context) error {
+	records := make([]Currency, len(currencies))
+	for _, currency := range currencies {
+		records = append(records, currency)
+	}
+
+	result := s.db.WithContext(ctx).
+		Clauses(clause.OnConflict{DoNothing: true}).
+		Create(&records)
+
+	if result.Error != nil {
+		return fmt.Errorf("seeding Currencies: %w", result.Error)
+	}
+	log.Printf("Currencies seeded (%d)", len(records))
 	return nil
 }
 

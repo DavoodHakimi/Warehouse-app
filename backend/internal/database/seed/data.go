@@ -12,6 +12,17 @@ type BusinessPartnerType struct {
 	PersianName string
 }
 
+type Currency struct {
+	Name        string
+	PersianName string
+}
+
+var currencies = []Currency{
+	{Name: "Rial", PersianName: "ریال"},
+	{Name: "Dollar", PersianName: "دلار"},
+	{Name: "Euro", PersianName: "یورو"},
+}
+
 var partnerTypes = []BusinessPartnerType{
 	{Name: "Supplier", PersianName: "تامین کننده"},
 	{Name: "Customer", PersianName: "خریدار"},
