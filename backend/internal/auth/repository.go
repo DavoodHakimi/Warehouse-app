@@ -14,26 +14,19 @@ func NewRepository(db *gorm.DB) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) createComapny(c *company.Company) error {
-	r.db.Transaction(func(tx *gorm.DB) error {
+func (r *Repository) createComapny(c *company.Company, u *users.User) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(c).Error; err != nil {
 			return err
 		}
 
-		return nil
-	})
-	return nil
-}
-
-func (r *Repository) createUser(u *users.User) error {
-	r.db.Transaction(func(tx *gorm.DB) error {
+		u.CompanyID = c.ID
 		if err := tx.Create(u).Error; err != nil {
 			return err
 		}
 
 		return nil
 	})
-	return nil
 }
 
 func (r *Repository) readUser(d *LogInRequest) (*users.User, error) {

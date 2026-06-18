@@ -21,13 +21,8 @@ func NewService(repo *Repository) *Service {
 }
 
 func (s *Service) SignUp(r *SignUpRequest) error {
-	// TODO: Implement transaction to ensure both company and user creation
 	newCompany := company.Company{
 		Name: r.CompanyName,
-	}
-	err := s.repo.createComapny(&newCompany)
-	if err != nil {
-		return err
 	}
 
 	hashedPassword, err := users.HashPassword(r.Password)
@@ -42,9 +37,9 @@ func (s *Service) SignUp(r *SignUpRequest) error {
 		Password:    string(hashedPassword),
 		PhoneNumber: r.PhoneNumber,
 		Email:       r.Email,
-		CompanyID:   newCompany.ID,
 	}
-	err = s.repo.createUser(&newUser)
+
+	err = s.repo.createComapny(&newCompany, &newUser)
 	if err != nil {
 		return err
 	}
