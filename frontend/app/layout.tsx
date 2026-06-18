@@ -13,7 +13,7 @@ const vazirmatn = Vazirmatn({
 export const metadata: Metadata = {
   title: 'سامانه مدیریت انبار',
   description: 'سامانه مدیریت انبار، موجودی و سفارش‌ها',
-  generator: 'v0.app',
+  generator: '',
 }
 
 export const viewport: Viewport = {

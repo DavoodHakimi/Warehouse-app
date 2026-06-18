@@ -49,19 +49,16 @@ export function OrderFormDialog({ open, onOpenChange, onSaved }: Props) {
 
   useEffect(() => {
     if (!open) return
-    // بازنشانی فرم
     setOrderType('sale')
     setPartnerId('')
     setCurrency('1')
     setExchangeRate('1')
     setItems([{ ...emptyItem }])
 
-    // دریافت محصولات (همه نقش‌های مجاز دسترسی دارند)
     apiFetch<{ products: Product[] }>('/products/')
       .then((res) => setProducts(res.products ?? []))
       .catch(() => setProducts([]))
 
-    // تلاش برای دریافت شرکا؛ در صورت نبود دسترسی، ورود دستی شناسه
     apiFetch<{ partners: Partner[] }>('/partners/')
       .then((res) => setPartners(res.partners ?? []))
       .catch(() => setPartners(null))
@@ -103,8 +100,8 @@ export function OrderFormDialog({ open, onOpenChange, onSaved }: Props) {
         method: 'POST',
         body: {
           order_type: orderType,
-          business_partner_name: Number(partnerId), // طبق مستندات، شناسه شریک
-          currency: Number(currency), // طبق مستندات، شناسه واحد پول
+          business_partner_name: Number(partnerId),
+          currency: Number(currency),
           exchange_rate: Number(exchangeRate),
           order_items: items.map((it) => ({
             product_id: Number(it.product_id),

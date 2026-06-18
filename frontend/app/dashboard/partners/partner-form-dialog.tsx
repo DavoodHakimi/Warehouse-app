@@ -41,7 +41,6 @@ const empty = {
   contact_phone_number: '',
 }
 
-// نگاشت نام انگلیسی نوع شریک به شناسه
 const TYPE_NAME_TO_ID: Record<string, number> = {
   Supplier: 1,
   Customer: 2,

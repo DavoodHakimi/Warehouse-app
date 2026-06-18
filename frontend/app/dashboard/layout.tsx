@@ -33,12 +33,11 @@ export default function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-secondary">
-      {/* نوار کناری دسکتاپ */}
+      {/*ُsidebar for Desktop*/}
       <aside className="fixed inset-y-0 right-0 z-30 hidden w-64 border-l border-border lg:block">
         <DashboardSidebar />
       </aside>
 
-      {/* کشوی موبایل */}
       {mobileOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div
@@ -61,7 +60,6 @@ export default function DashboardLayout({
         </div>
       )}
 
-      {/* محتوای اصلی */}
       <div className="flex min-w-0 flex-1 flex-col lg:mr-64">
         <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background/80 px-4 py-3 backdrop-blur lg:hidden">
           <Button
