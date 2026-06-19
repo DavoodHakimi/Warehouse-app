@@ -1,0 +1,75 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: warehouse-backend
+    restart: unless-stopped
+    volumes:
+      - /backend/app.log:/app/app.log
+    networks:
+      - app-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile 
+    container_name: warehouse-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000" 
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  postgres:
+      image: postgres:16
+      container_name:  warehouseDB
+      ports:
+        - "5433:5432"
+      environment:
+        POSTGRES_USER: pgUser
+        POSTGRES_PASSWORD: pgPassword
+        POSTGRES_DB: postgres
+      volumes:
+        - postgres-db-volume:/var/lib/postgresql/data
+      healthcheck:
+        test: ["CMD", "pg_isready", "-U", "pgUser"]
+        interval: 10s
+        retries: 5
+        start_period: 5s
+      restart: always
+
+  nginx:
+    image: nginx:alpine
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+    internal: false  # Allow frontend to access external networks
+
+volumes:
+  postgres-db-volume:
+    driver: local
+    
+  backend-data:
+    driver: local 
