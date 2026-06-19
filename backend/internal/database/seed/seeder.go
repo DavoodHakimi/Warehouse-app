@@ -43,7 +43,7 @@ func (s *Seeder) Run(ctx context.Context) error {
 }
 
 func (s *Seeder) seedCurrencies(ctx context.Context) error {
-	records := make([]Currency, len(currencies))
+	records := make([]Currency, 0, len(currencies))
 	for _, currency := range currencies {
 		records = append(records, currency)
 	}
@@ -60,7 +60,7 @@ func (s *Seeder) seedCurrencies(ctx context.Context) error {
 }
 
 func (s *Seeder) seedPartnerTypes(ctx context.Context) error {
-	records := make([]BusinessPartnerType, len(partnerTypes))
+	records := make([]BusinessPartnerType, 0, len(partnerTypes))
 	for _, partnerType := range partnerTypes {
 		records = append(records, partnerType)
 	}
