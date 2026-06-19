@@ -16,20 +16,26 @@ A web-based warehouse management application that handles inventory, orders, bus
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | Go, Gin, GORM, PostgreSQL |
+| Backend | Go, Gin, GORM |
 | Frontend | Next.js, React, TypeScript, Tailwind CSS |
+| Database | PostgreSQL 16 |
+| Reverse Proxy | Nginx |
 | Auth | JWT (HS256, 24h expiry), bcrypt |
-| Database | PostgreSQL |
+| Containerization | Docker, docker-compose |
 
 ## Quick Start
 
-### Requirements
+### Docker (recommended)
 
-- Go 1.26+
-- Node.js / npm
-- PostgreSQL
+```bash
+docker compose up --build
+```
 
-### Backend
+Open [http://localhost](http://localhost) — nginx serves the frontend and proxies `/api/` requests to the backend.
+
+### Manual
+
+#### Backend
 
 ```bash
 cd backend
@@ -38,16 +44,39 @@ DBUSER="YOUR_USERNAME" DBPASS="YOUR_PASSWORD" DBHOST="localhost" DBPORT="PORT" D
 
 The server starts on `http://localhost:8080` and auto-migrates the database schema and seeds reference data (currencies, roles, permissions).
 
-### Frontend
+#### Frontend
 
 ```bash
 cd frontend
 npm install
 npm run dev
-# npm run build # for building
 ```
 
 The app runs on `http://localhost:3000`. Create an account, and you're in.
+
+## System Architecture
+
+```
+                      ┌─────────┐
+                      │  Nginx  │  (port 80)
+                      │  :80    │
+                      └────┬────┘
+                           │
+               ┌───────────┴───────────┐
+               ▼                       ▼
+        ┌──────────┐           ┌──────────────┐
+        │ Backend  │           │   Frontend   │
+        │ Go :8080 │           │ Next.js :3000│
+        └────┬─────┘           └──────────────┘
+             │
+             ▼
+      ┌──────────────┐
+      │  PostgreSQL  │
+      │  :PORT       │
+      └──────────────┘
+```
+
+Nginx routes `/api/` requests to the Go backend and everything else to the Next.js frontend, so from the browser's perspective everything comes from the same origin — no CORS issues.
 
 ## Project Structure
 
@@ -64,13 +93,10 @@ backend/
 │   └── database/     — Migrations, seed data
 frontend/
 └── app/              — Next.js pages (login, signup, dashboard)
+nginx/
+└── default.conf      — Nginx config
+docker-compose.yaml   — Orchestrates all services
 ```
-
-## Roadmap
-
-- Docker setup for easy deployment
-- Nginx reverse proxy
-- Additional reports and analytics
 
 ## License
 
