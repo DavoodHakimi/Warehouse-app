@@ -13,7 +13,7 @@ func TestRepository_FindByID(t *testing.T) {
 	c := seedCompany(t, db, "Acme Corp")
 	product := seedProduct(t, db, c.ID, "Widget", "PRD-001", 9.99)
 
-	found, err := repo.FindByID("PRD-001")
+	found, err := repo.FindByID("PRD-001", int(c.ID))
 	require.NoError(t, err)
 	assert.Equal(t, product.Name, found.Name)
 	assert.Equal(t, "PRD-001", found.ProductNumber)
@@ -22,8 +22,9 @@ func TestRepository_FindByID(t *testing.T) {
 func TestRepository_FindByID_notFound(t *testing.T) {
 	db := newTestDB(t)
 	repo := NewRepository(db)
+	c := seedCompany(t, db, "Acme Corp")
 
-	_, err := repo.FindByID("PRD-MISSING")
+	_, err := repo.FindByID("PRD-MISSING", int(c.ID))
 	assert.Error(t, err)
 }
 
@@ -52,7 +53,7 @@ func TestRepository_Update(t *testing.T) {
 
 	product.Name = "Updated Widget"
 	product.DefaultPrice = 19.99
-	err := repo.Update(product)
+	err := repo.Update(product, int(c.ID))
 	require.NoError(t, err)
 
 	var stored Product
@@ -67,12 +68,23 @@ func TestRepository_Delete(t *testing.T) {
 	c := seedCompany(t, db, "Acme Corp")
 	product := seedProduct(t, db, c.ID, "Widget", "PRD-001", 9.99)
 
-	err := repo.Delete(product)
+	err := repo.Delete(product, int(c.ID))
 	require.NoError(t, err)
 
 	var count int64
 	db.Model(&Product{}).Where("id = ?", product.ID).Count(&count)
 	assert.Equal(t, int64(0), count)
+}
+
+func TestRepository_FindByID_crossCompanyIsolation(t *testing.T) {
+	db := newTestDB(t)
+	repo := NewRepository(db)
+	c := seedCompany(t, db, "Acme Corp")
+	other := seedCompany(t, db, "Other Corp")
+	product := seedProduct(t, db, c.ID, "Widget", "PRD-001", 9.99)
+
+	_, err := repo.FindByID(product.ProductNumber, int(other.ID))
+	assert.Error(t, err)
 }
 
 func TestRepository_ReadCompanyProducts(t *testing.T) {

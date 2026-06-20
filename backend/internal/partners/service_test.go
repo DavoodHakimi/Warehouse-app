@@ -47,7 +47,7 @@ func TestService_ReadPartner(t *testing.T) {
 	svc, db := setupService(t)
 	bp := createPartnerForCompany(t, db, 5)
 
-	got, err := svc.ReadPartner(itoa(bp.ID))
+	got, err := svc.ReadPartner(itoa(bp.ID), int(bp.CompanyID))
 	require.NoError(t, err)
 	// ReadPartner returns a zero PartnerInfoResponse on repo error; on success
 	// the type name comes from the joined BusinessPartnerType.
@@ -57,14 +57,11 @@ func TestService_ReadPartner(t *testing.T) {
 	assert.Equal(t, int(bp.ID), got.ID)
 }
 
-func TestService_ReadPartner_NotFound_ReturnsEmptyNoError(t *testing.T) {
+func TestService_ReadPartner_NotFound(t *testing.T) {
 	svc, _ := setupService(t)
 
-	// Documenting current (arguably buggy) behaviour: when the partner cannot be
-	// found, ReadPartner swallows the error and returns an empty response.
-	got, err := svc.ReadPartner("99999")
-	require.NoError(t, err)
-	assert.Empty(t, got.Name)
+	_, err := svc.ReadPartner("99999", 1)
+	require.Error(t, err)
 }
 
 func TestService_AllPartners(t *testing.T) {
@@ -86,7 +83,7 @@ func TestService_DeletePartner(t *testing.T) {
 	svc, db := setupService(t)
 	bp := createPartnerForCompany(t, db, 1)
 
-	require.NoError(t, svc.DeletePartner(int(bp.ID)))
+	require.NoError(t, svc.DeletePartner(int(bp.ID), int(bp.CompanyID)))
 
 	// Delete is a gorm soft-delete (the row stays, but gains a deleted_at
 	// timestamp), so count only non-deleted rows.
@@ -97,7 +94,7 @@ func TestService_DeletePartner(t *testing.T) {
 
 func TestService_DeletePartner_NotFound(t *testing.T) {
 	svc, _ := setupService(t)
-	err := svc.DeletePartner(99999)
+	err := svc.DeletePartner(99999, 1)
 	require.Error(t, err)
 }
 
@@ -114,7 +111,7 @@ func TestService_UpdatePartner_NoChanges(t *testing.T) {
 		PhoneNumber:           bp.PhoneNumber,
 		Email:                 bp.Email,
 	}
-	err := svc.UpdatePartner(req, 1)
+	err := svc.UpdatePartner(req, 1, int(bp.CompanyID))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no changes detected")
 }
@@ -134,7 +131,7 @@ func TestService_UpdatePartner(t *testing.T) {
 		PhoneNumber:           bp.PhoneNumber,
 		Email:                 "new@example.com",
 	}
-	require.NoError(t, svc.UpdatePartner(req, 1))
+	require.NoError(t, svc.UpdatePartner(req, 1, int(bp.CompanyID)))
 
 	var stored BusinessPartner
 	require.NoError(t, db.First(&stored, bp.ID).Error)
@@ -161,7 +158,7 @@ func TestService_ModifiedFields(t *testing.T) {
 		BusinessPartnerTypeID: bpt2.ID, // type changed
 		PhoneNumber:           bp.PhoneNumber,
 		Email:                 "acme@example.com",
-	})
+	}, 1)
 
 	assert.Contains(t, changes, "Name")
 	assert.Equal(t, [2]string{"Acme Co", "Renamed"}, changes["Name"])
@@ -178,13 +175,13 @@ func TestService_ModifiedFields_NoChanges(t *testing.T) {
 		BusinessPartnerTypeID: bp.BusinessPartnerTypeID,
 		PhoneNumber:           bp.PhoneNumber,
 		Email:                 bp.Email,
-	})
+	}, int(bp.CompanyID))
 	assert.Empty(t, changes)
 }
 
 func TestService_ModifiedFields_NotFound(t *testing.T) {
 	svc, _ := setupService(t)
-	changes := svc.modifiedFields(&UpdatePartnerRequest{ID: 99999})
+	changes := svc.modifiedFields(&UpdatePartnerRequest{ID: 99999}, 1)
 	assert.Nil(t, changes)
 }
 

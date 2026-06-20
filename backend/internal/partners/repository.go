@@ -23,9 +23,9 @@ func (r *Repository) ReadCompanyPartners(companyID int) ([]BusinessPartner, erro
 	return partners, nil
 }
 
-func (r *Repository) FindByID(id int) (*BusinessPartner, error) {
+func (r *Repository) FindByID(id int, companyID int) (*BusinessPartner, error) {
 	var partner BusinessPartner
-	res := r.db.Joins("BusinessPartnerType").First(&partner, id)
+	res := r.db.Joins("BusinessPartnerType").Where("company_id = ?", companyID).First(&partner, id)
 	if res.Error != nil {
 		return nil, res.Error
 	}
@@ -42,22 +42,22 @@ func (r *Repository) Create(partner *BusinessPartner) error {
 	})
 }
 
-func (r *Repository) Update(partner *BusinessPartner) error {
+func (r *Repository) Update(partner *BusinessPartner, companyID int) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		return tx.Model(&BusinessPartner{}).Where("id = ?", partner.ID).Updates(map[string]interface{}{
+		return tx.Model(&BusinessPartner{}).Where("id = ? AND company_id = ?", partner.ID, companyID).Updates(map[string]interface{}{
 			"name":                     partner.Name,
 			"email":                    partner.Email,
 			"phone_number":             partner.PhoneNumber,
-			"business_partner_type_id": partner.BusinessPartnerTypeID,
+			"business_partner_type_id":  partner.BusinessPartnerTypeID,
 			"contact_name":             partner.ContactName,
 			"contact_phone_number":     partner.ContactPhoneNumber,
 		}).Error
 	})
 }
 
-func (r *Repository) Delete(partner *BusinessPartner) error {
+func (r *Repository) Delete(partner *BusinessPartner, companyID int) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Delete(partner).Error; err != nil {
+		if err := tx.Where("company_id = ?", companyID).Delete(partner).Error; err != nil {
 			return err
 		}
 

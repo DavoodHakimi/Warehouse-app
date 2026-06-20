@@ -76,7 +76,7 @@ func TestService_ReadOrder(t *testing.T) {
 	svc, db := setupService(t)
 	o := seedOrder(t, db, "sale", "Pending")
 
-	got, err := svc.ReadOrder(itoa(o.ID))
+	got, err := svc.ReadOrder(itoa(o.ID), int(o.CompanyID))
 	require.NoError(t, err)
 	assert.Equal(t, "sale", got.OrderType)
 	assert.Equal(t, "Pending", got.Status)
@@ -87,14 +87,14 @@ func TestService_ReadOrder(t *testing.T) {
 
 func TestService_ReadOrder_InvalidID(t *testing.T) {
 	svc, _ := setupService(t)
-	_, err := svc.ReadOrder("not-a-number")
+	_, err := svc.ReadOrder("not-a-number", 1)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "Invalid Order ID")
 }
 
 func TestService_CheckOrderExist_NotFound(t *testing.T) {
 	svc, _ := setupService(t)
-	_, _, err := svc.CheckOrderExist("99999")
+	_, _, err := svc.CheckOrderExist("99999", 1)
 	require.Error(t, err)
 }
 
@@ -102,8 +102,8 @@ func TestService_Approve_FromPending(t *testing.T) {
 	svc, db := setupService(t)
 	o := seedOrder(t, db, "sale", "Pending")
 
-	require.NoError(t, svc.Approve(itoa(o.ID)))
-	got, err := svc.ReadOrder(itoa(o.ID))
+	require.NoError(t, svc.Approve(itoa(o.ID), int(o.CompanyID)))
+	got, err := svc.ReadOrder(itoa(o.ID), int(o.CompanyID))
 	require.NoError(t, err)
 	assert.Equal(t, "Approved", got.Status)
 }
@@ -112,22 +112,17 @@ func TestService_Approve_RejectsNonPending(t *testing.T) {
 	svc, db := setupService(t)
 	o := seedOrder(t, db, "sale", "Approved")
 
-	err := svc.Approve(itoa(o.ID))
+	err := svc.Approve(itoa(o.ID), int(o.CompanyID))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "can not changed to approve")
 }
 
 func TestService_Pack_FromApprovedSale(t *testing.T) {
-	t.Skip("BUG: Order.order_type has a DB CHECK constraint limiting it to " +
-		"'sale'/'purchase' (lowercase), but Pack() compares order.OrderType != \"Sale\" " +
-		"(capital S). A validly-stored sale order can therefore NEVER be Packed. " +
-		"Remove this skip once service.go is fixed to compare against \"sale\".")
-
 	svc, db := setupService(t)
 	o := seedOrder(t, db, "sale", "Approved")
 
-	require.NoError(t, svc.Pack(itoa(o.ID)))
-	got, err := svc.ReadOrder(itoa(o.ID))
+	require.NoError(t, svc.Pack(itoa(o.ID), int(o.CompanyID)))
+	got, err := svc.ReadOrder(itoa(o.ID), int(o.CompanyID))
 	require.NoError(t, err)
 	assert.Equal(t, "Packed", got.Status)
 }
@@ -136,21 +131,17 @@ func TestService_Pack_RejectsWrongType(t *testing.T) {
 	svc, db := setupService(t)
 	o := seedOrder(t, db, "purchase", "Approved") // Pack requires a sale order
 
-	err := svc.Pack(itoa(o.ID))
+	err := svc.Pack(itoa(o.ID), int(o.CompanyID))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "can not changed to Packed")
 }
 
 func TestService_Ship_FromPackedSale(t *testing.T) {
-	t.Skip("BUG: same root cause as TestService_Pack_FromApprovedSale — Ship() " +
-		"compares order.OrderType != \"Sale\", but stored orders are lowercase 'sale'. " +
-		"Remove this skip once service.go is fixed.")
-
 	svc, db := setupService(t)
 	o := seedOrder(t, db, "sale", "Packed")
 
-	require.NoError(t, svc.Ship(itoa(o.ID)))
-	got, err := svc.ReadOrder(itoa(o.ID))
+	require.NoError(t, svc.Ship(itoa(o.ID), int(o.CompanyID)))
+	got, err := svc.ReadOrder(itoa(o.ID), int(o.CompanyID))
 	require.NoError(t, err)
 	assert.Equal(t, "Shipped", got.Status)
 }
@@ -159,7 +150,7 @@ func TestService_Ship_RejectsNonPacked(t *testing.T) {
 	svc, db := setupService(t)
 	o := seedOrder(t, db, "sale", "Approved") // not yet Packed
 
-	err := svc.Ship(itoa(o.ID))
+	err := svc.Ship(itoa(o.ID), int(o.CompanyID))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "can not changed to Shipped")
 }
@@ -168,8 +159,8 @@ func TestService_Receive_FromWaitingPurchase(t *testing.T) {
 	svc, db := setupService(t)
 	o := seedOrder(t, db, "purchase", "Waiting")
 
-	require.NoError(t, svc.Receive(itoa(o.ID)))
-	got, err := svc.ReadOrder(itoa(o.ID))
+	require.NoError(t, svc.Receive(itoa(o.ID), int(o.CompanyID)))
+	got, err := svc.ReadOrder(itoa(o.ID), int(o.CompanyID))
 	require.NoError(t, err)
 	assert.Equal(t, "Received", got.Status)
 }
@@ -178,7 +169,7 @@ func TestService_Receive_RejectsWrongType(t *testing.T) {
 	svc, db := setupService(t)
 	o := seedOrder(t, db, "sale", "Waiting") // Receive requires "purchase"
 
-	err := svc.Receive(itoa(o.ID))
+	err := svc.Receive(itoa(o.ID), int(o.CompanyID))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "can not changed to Received")
 }
@@ -223,9 +214,9 @@ func TestService_Approve_SaleReservesStock(t *testing.T) {
 	prodID := seedProductWithStock(t, db, compID, 10, 0)
 	o := seedOrderWithItem(t, db, compID, bpID, curID, "sale", "Pending", prodID, 4)
 
-	require.NoError(t, svc.Approve(itoa(o.ID)))
+	require.NoError(t, svc.Approve(itoa(o.ID), int(o.CompanyID)))
 
-	got, err := svc.ReadOrder(itoa(o.ID))
+	got, err := svc.ReadOrder(itoa(o.ID), int(o.CompanyID))
 	require.NoError(t, err)
 	assert.Equal(t, "Approved", got.Status)
 
@@ -240,11 +231,11 @@ func TestService_Approve_SaleInsufficientStockRollsBack(t *testing.T) {
 	prodID := seedProductWithStock(t, db, compID, 2, 0) // only 2 available
 	o := seedOrderWithItem(t, db, compID, bpID, curID, "sale", "Pending", prodID, 5)
 
-	err := svc.Approve(itoa(o.ID))
+	err := svc.Approve(itoa(o.ID), int(o.CompanyID))
 	require.Error(t, err)
 
 	// Status stayed Pending and stock is untouched.
-	got, err := svc.ReadOrder(itoa(o.ID))
+	got, err := svc.ReadOrder(itoa(o.ID), int(o.CompanyID))
 	require.NoError(t, err)
 	assert.Equal(t, "Pending", got.Status)
 	st := stockOf(t, db, prodID)
@@ -258,9 +249,9 @@ func TestService_Ship_FulfillsReserved(t *testing.T) {
 	prodID := seedProductWithStock(t, db, compID, 0, 4) // already reserved
 	o := seedOrderWithItem(t, db, compID, bpID, curID, "sale", "Packed", prodID, 4)
 
-	require.NoError(t, svc.Ship(itoa(o.ID)))
+	require.NoError(t, svc.Ship(itoa(o.ID), int(o.CompanyID)))
 
-	got, err := svc.ReadOrder(itoa(o.ID))
+	got, err := svc.ReadOrder(itoa(o.ID), int(o.CompanyID))
 	require.NoError(t, err)
 	assert.Equal(t, "Shipped", got.Status)
 	st := stockOf(t, db, prodID)
@@ -274,9 +265,9 @@ func TestService_Cancel_SaleApprovedReleasesReservation(t *testing.T) {
 	prodID := seedProductWithStock(t, db, compID, 6, 4) // 4 reserved
 	o := seedOrderWithItem(t, db, compID, bpID, curID, "sale", "Approved", prodID, 4)
 
-	require.NoError(t, svc.Cancel(itoa(o.ID)))
+	require.NoError(t, svc.Cancel(itoa(o.ID), int(o.CompanyID)))
 
-	got, err := svc.ReadOrder(itoa(o.ID))
+	got, err := svc.ReadOrder(itoa(o.ID), int(o.CompanyID))
 	require.NoError(t, err)
 	assert.Equal(t, "Canceled", got.Status)
 	st := stockOf(t, db, prodID)
@@ -290,9 +281,9 @@ func TestService_Cancel_SalePendingNoStockChange(t *testing.T) {
 	prodID := seedProductWithStock(t, db, compID, 10, 0) // nothing reserved yet
 	o := seedOrderWithItem(t, db, compID, bpID, curID, "sale", "Pending", prodID, 4)
 
-	require.NoError(t, svc.Cancel(itoa(o.ID)))
+	require.NoError(t, svc.Cancel(itoa(o.ID), int(o.CompanyID)))
 
-	got, err := svc.ReadOrder(itoa(o.ID))
+	got, err := svc.ReadOrder(itoa(o.ID), int(o.CompanyID))
 	require.NoError(t, err)
 	assert.Equal(t, "Canceled", got.Status)
 	st := stockOf(t, db, prodID)
@@ -304,7 +295,7 @@ func TestService_Cancel_AlreadyCanceled(t *testing.T) {
 	svc, db := setupService(t)
 	o := seedOrder(t, db, "sale", "Canceled")
 
-	err := svc.Cancel(itoa(o.ID))
+	err := svc.Cancel(itoa(o.ID), int(o.CompanyID))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "already canceled")
 }
@@ -317,9 +308,9 @@ func TestService_MarkWaiting_PurchaseFromApproved(t *testing.T) {
 	prodID := seedProductWithStock(t, db, compID, 0, 0)
 	o := seedOrderWithItem(t, db, compID, bpID, curID, "purchase", "Approved", prodID, 5)
 
-	require.NoError(t, svc.MarkWaiting(itoa(o.ID)))
+	require.NoError(t, svc.MarkWaiting(itoa(o.ID), int(o.CompanyID)))
 
-	got, err := svc.ReadOrder(itoa(o.ID))
+	got, err := svc.ReadOrder(itoa(o.ID), int(o.CompanyID))
 	require.NoError(t, err)
 	assert.Equal(t, "Waiting", got.Status)
 	// no stock change on waiting
@@ -334,9 +325,9 @@ func TestService_Receive_PurchaseAddsStock(t *testing.T) {
 	prodID := seedProductWithStock(t, db, compID, 3, 0)
 	o := seedOrderWithItem(t, db, compID, bpID, curID, "purchase", "Waiting", prodID, 5)
 
-	require.NoError(t, svc.Receive(itoa(o.ID)))
+	require.NoError(t, svc.Receive(itoa(o.ID), int(o.CompanyID)))
 
-	got, err := svc.ReadOrder(itoa(o.ID))
+	got, err := svc.ReadOrder(itoa(o.ID), int(o.CompanyID))
 	require.NoError(t, err)
 	assert.Equal(t, "Received", got.Status)
 	st := stockOf(t, db, prodID)
@@ -350,9 +341,9 @@ func TestService_Cancel_PurchaseNoStockChange(t *testing.T) {
 	prodID := seedProductWithStock(t, db, compID, 3, 0)
 	o := seedOrderWithItem(t, db, compID, bpID, curID, "purchase", "Waiting", prodID, 5)
 
-	require.NoError(t, svc.Cancel(itoa(o.ID)))
+	require.NoError(t, svc.Cancel(itoa(o.ID), int(o.CompanyID)))
 
-	got, err := svc.ReadOrder(itoa(o.ID))
+	got, err := svc.ReadOrder(itoa(o.ID), int(o.CompanyID))
 	require.NoError(t, err)
 	assert.Equal(t, "Canceled", got.Status)
 	st := stockOf(t, db, prodID)
@@ -364,30 +355,27 @@ func TestService_DeleteOrder(t *testing.T) {
 	svc, db := setupService(t)
 	o := seedOrder(t, db, "sale", "Pending")
 
-	require.NoError(t, svc.DeleteOrder(o.ID))
-	_, err := svc.ReadOrder(itoa(o.ID))
+	require.NoError(t, svc.DeleteOrder(o.ID, int(o.CompanyID)))
+	_, err := svc.ReadOrder(itoa(o.ID), int(o.CompanyID))
 	assert.Error(t, err)
 }
 
 func TestService_DeleteOrder_NotFound(t *testing.T) {
 	svc, _ := setupService(t)
-	err := svc.DeleteOrder(99999)
+	err := svc.DeleteOrder(99999, 1)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "Not found")
 }
 
 func TestService_AllOrders(t *testing.T) {
 	svc, db := setupService(t)
-	seedOrder(t, db, "sale", "Pending")
+	o := seedOrder(t, db, "sale", "Pending")
 
-	// NOTE: AllOrders depends on repo.ReadCompanyOrders, which queries a
-	// misspelled column and currently errors. See repository_test.go.
-	got, err := svc.AllOrders(1)
-	if err != nil {
-		t.Logf("AllOrders errored as expected due to the tracked 'comnpany_id' bug: %v", err)
-		return
-	}
-	_ = got
+	got, err := svc.AllOrders(int(o.CompanyID))
+	require.NoError(t, err)
+	require.Len(t, got.Orders, 1)
+	assert.Equal(t, "sale", got.Orders[0].OrderType)
+	assert.Equal(t, "Pending", got.Orders[0].Status)
 }
 
 func TestService_UpdateOrder_NoChanges(t *testing.T) {
@@ -402,21 +390,17 @@ func TestService_UpdateOrder_NoChanges(t *testing.T) {
 		CurrencyID:        o.CurrencyID,
 		ExchangeRate:      o.ExchangeRate,
 	}
-	err := svc.UpdateOrder(req, 1)
+	err := svc.UpdateOrder(req, 1, int(o.CompanyID))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no changes detected")
 }
 
 func TestService_UpdateOrder(t *testing.T) {
-	t.Skip("BUG: UpdateOrder builds the order to update but never sets order.ID = o.ID, " +
-		"so Repository.Update runs `WHERE id = 0` and updates nothing. The persisted row " +
-		"is left unchanged. Remove this skip once service.go is fixed.")
-
 	svc, db := setupService(t)
 	o := seedOrder(t, db, "sale", "Pending")
 
 	// create a second currency to switch to
-	cur2 := Currency{Name: "EUR"}
+	cur2 := Currency{Name: "EUR", PersianName: "یورو"}
 	require.NoError(t, db.Create(&cur2).Error)
 
 	req := &UpdateOrderRequest{
@@ -426,7 +410,7 @@ func TestService_UpdateOrder(t *testing.T) {
 		CurrencyID:        cur2.ID, // changed
 		ExchangeRate:      o.ExchangeRate,
 	}
-	require.NoError(t, svc.UpdateOrder(req, 1))
+	require.NoError(t, svc.UpdateOrder(req, 1, int(o.CompanyID)))
 
 	var stored Order
 	require.NoError(t, db.First(&stored, o.ID).Error)
@@ -436,7 +420,7 @@ func TestService_UpdateOrder(t *testing.T) {
 func TestService_ModifiedFields(t *testing.T) {
 	svc, db := setupService(t)
 	o := seedOrder(t, db, "sale", "Pending")
-	cur2 := Currency{Name: "EUR"}
+	cur2 := Currency{Name: "EUR", PersianName: "یورو"}
 	require.NoError(t, db.Create(&cur2).Error)
 
 	changes := svc.modifiedFields(&UpdateOrderRequest{
@@ -445,7 +429,7 @@ func TestService_ModifiedFields(t *testing.T) {
 		CurrencyID:        cur2.ID,    // changed
 		BusinessPartnerID: o.BusinessPartnerID,
 		ExchangeRate:      o.ExchangeRate,
-	})
+	}, int(o.CompanyID))
 	assert.Contains(t, changes, "OrderType")
 	assert.Contains(t, changes, "CurrencyID")
 	assert.NotContains(t, changes, "ExchangeRate")
@@ -453,7 +437,7 @@ func TestService_ModifiedFields(t *testing.T) {
 
 func TestService_ModifiedFields_NotFound(t *testing.T) {
 	svc, _ := setupService(t)
-	changes := svc.modifiedFields(&UpdateOrderRequest{ID: 99999})
+	changes := svc.modifiedFields(&UpdateOrderRequest{ID: 99999}, 1)
 	assert.Nil(t, changes)
 }
 

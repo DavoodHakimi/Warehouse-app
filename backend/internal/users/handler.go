@@ -43,8 +43,9 @@ func (h *Handler) AllUsersHandler(c *gin.Context) {
 func (h *Handler) UserInfoHandler(c *gin.Context) {
 	userId := c.Param("userID")
 	uid := c.GetInt("user_id")
+	companyID := c.GetInt("company_id")
 
-	user, err := h.service.ReadUser(userId)
+	user, err := h.service.ReadUser(userId, companyID)
 
 	if err != nil {
 		slog.Error("user_info - failed", "error", err, "target_user_id", userId, "request_by", uid)
@@ -92,6 +93,7 @@ func (h *Handler) UserCreationHandler(c *gin.Context) {
 func (h *Handler) UserUpdateHandler(c *gin.Context) {
 	var req UpdateUserRequest
 	uid := c.GetInt("user_id")
+	companyID := c.GetInt("company_id")
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		slog.Error("update_user - validation failed", "error", err, "request_by", uid)
@@ -101,7 +103,7 @@ func (h *Handler) UserUpdateHandler(c *gin.Context) {
 		})
 		return
 	}
-	err := h.service.UpdateUser(&req, req.ID)
+	err := h.service.UpdateUser(&req, uid, companyID)
 
 	if err != nil {
 		slog.Error("update_user - failed", "error", err, "target_user_id", req.ID, "request_by", uid)
@@ -119,8 +121,9 @@ func (h *Handler) UserUpdateHandler(c *gin.Context) {
 func (h *Handler) UserDeleteHandler(c *gin.Context) {
 	userId := c.Param("userID")
 	uid := c.GetInt("user_id")
+	companyID := c.GetInt("company_id")
 
-	user, err := h.service.ReadUser(userId)
+	user, err := h.service.ReadUser(userId, companyID)
 
 	if err != nil {
 		slog.Error("delete_user - read failed", "error", err, "target_user_id", userId, "request_by", uid)
@@ -130,7 +133,7 @@ func (h *Handler) UserDeleteHandler(c *gin.Context) {
 		return
 	}
 
-	err = h.service.DeleteUser(user.ID)
+	err = h.service.DeleteUser(user.ID, companyID)
 	if err != nil {
 		slog.Error("delete_user - failed", "error", err, "target_user_id", user.ID, "request_by", uid)
 		c.JSON(http.StatusInternalServerError, gin.H{

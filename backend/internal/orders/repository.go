@@ -28,9 +28,9 @@ func (r *Repository) ReadCompanyOrders(companyID int) ([]Order, error) {
 	return orders, nil
 }
 
-func (r *Repository) FindByID(orderID uint) (*Order, error) {
+func (r *Repository) FindByID(orderID uint, companyID uint) (*Order, error) {
 	var order Order
-	res := r.db.Joins("BusinessPartner").Joins("Currency").Preload("OrderItems").First(&order, orderID)
+	res := r.db.Joins("BusinessPartner").Joins("Currency").Preload("OrderItems").Where("orders.company_id = ?", companyID).First(&order, orderID)
 	if res.Error != nil {
 		return nil, res.Error
 	}
@@ -47,9 +47,9 @@ func (r *Repository) Create(order *Order) error {
 	})
 }
 
-func (r *Repository) Update(order *Order) error {
+func (r *Repository) Update(order *Order, companyID uint) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		return tx.Model(&Order{}).Where("id = ?", order.ID).Updates(map[string]interface{}{
+		return tx.Model(&Order{}).Where("id = ? and orders.company_id = ?", order.ID, companyID).Updates(map[string]interface{}{
 			"order_type":          order.OrderType,
 			"status":              order.Status,
 			"business_partner_id": order.BusinessPartnerID,

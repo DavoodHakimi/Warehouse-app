@@ -61,7 +61,7 @@ func TestRepository_Create_and_FindByID(t *testing.T) {
 	require.NoError(t, repo.Create(&order))
 	assert.NotZero(t, order.ID)
 
-	got, err := repo.FindByID(order.ID)
+	got, err := repo.FindByID(order.ID, compID)
 	require.NoError(t, err)
 	assert.Equal(t, order.OrderType, got.OrderType)
 	assert.Equal(t, order.Status, got.Status)
@@ -93,7 +93,7 @@ func TestRepository_Create_WithItems(t *testing.T) {
 
 func TestRepository_FindByID_NotFound(t *testing.T) {
 	repo, _ := setupRepo(t)
-	_, err := repo.FindByID(99999)
+	_, err := repo.FindByID(99999, 1)
 	require.Error(t, err)
 }
 
@@ -118,7 +118,7 @@ func TestRepository_Delete(t *testing.T) {
 
 	require.NoError(t, repo.Delete(&order))
 
-	_, err := repo.FindByID(order.ID)
+	_, err := repo.FindByID(order.ID, compID)
 	assert.Error(t, err, "order should no longer exist after delete")
 }
 
@@ -133,7 +133,7 @@ func TestRepository_Update(t *testing.T) {
 	require.NoError(t, db.Create(&bpt2).Error)
 	bp2 := partners.BusinessPartner{Name: "Beta", BusinessPartnerTypeID: bpt2.ID, PhoneNumber: "09222222222", CompanyID: compID}
 	require.NoError(t, db.Create(&bp2).Error)
-	cur2 := Currency{Name: "EUR"}
+	cur2 := Currency{Name: "EUR", PersianName: "یورو"}
 	require.NoError(t, db.Create(&cur2).Error)
 
 	updated := Order{
@@ -144,7 +144,7 @@ func TestRepository_Update(t *testing.T) {
 		CurrencyID:        cur2.ID,
 		ExchangeRate:      2.5,
 	}
-	require.NoError(t, repo.Update(&updated))
+	require.NoError(t, repo.Update(&updated, compID))
 
 	var stored Order
 	require.NoError(t, db.First(&stored, order.ID).Error)
@@ -204,10 +204,6 @@ func TestRepository_StockOps(t *testing.T) {
 }
 
 func TestRepository_ReadCompanyOrders(t *testing.T) {
-	t.Skip("BUG: ReadCompanyOrders filters on the misspelled column 'comnpany_id' " +
-		"(should be 'company_id'); the query errors with 'no such column' in SQLite. " +
-		"Remove this skip once the typo in repository.go is fixed.")
-
 	repo, db := setupRepo(t)
 	compID, bpID, curID := seedRefs(t, db)
 

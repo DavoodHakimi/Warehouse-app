@@ -43,8 +43,9 @@ func (h *Handler) AllProductsHandler(c *gin.Context) {
 func (h *Handler) ProductInfoHandler(c *gin.Context) {
 	productNum := c.Param("productNumber")
 	uid := c.GetInt("user_id")
+	companyID := c.GetInt("company_id")
 
-	prod, err := h.service.ReadProduct(productNum)
+	prod, err := h.service.ReadProduct(productNum, companyID)
 
 	if err != nil {
 		slog.Error("product_info - failed", "error", err, "product_number", productNum, "request_by", uid)
@@ -92,6 +93,7 @@ func (h *Handler) ProductCreationHandler(c *gin.Context) {
 func (h *Handler) ProductUpdateHandler(c *gin.Context) {
 	var req UpdateProductRequest
 	uid := c.GetInt("user_id")
+	companyID := c.GetInt("company_id")
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		slog.Error("update_product - validation failed", "error", err, "request_by", uid)
@@ -101,7 +103,7 @@ func (h *Handler) ProductUpdateHandler(c *gin.Context) {
 		})
 		return
 	}
-	err := h.service.UpdateProduct(&req, uid)
+	err := h.service.UpdateProduct(&req, uid, companyID)
 
 	if err != nil {
 		slog.Error("update_product - failed", "error", err, "product_number", req.ProductNumber, "request_by", uid)
@@ -119,8 +121,9 @@ func (h *Handler) ProductUpdateHandler(c *gin.Context) {
 func (h *Handler) ProductDeleteHandler(c *gin.Context) {
 	productId := c.Param("productNumber")
 	uid := c.GetInt("user_id")
+	companyID := c.GetInt("company_id")
 
-	prod, err := h.service.ReadProduct(productId)
+	prod, err := h.service.ReadProduct(productId, companyID)
 
 	if err != nil {
 		slog.Error("delete_product - read failed", "error", err, "product_number", productId, "request_by", uid)
@@ -130,7 +133,7 @@ func (h *Handler) ProductDeleteHandler(c *gin.Context) {
 		return
 	}
 
-	err = h.service.DeleteProduct(prod.ProductNumber)
+	err = h.service.DeleteProduct(prod.ProductNumber, companyID)
 	if err != nil {
 		slog.Error("delete_product - failed", "error", err, "product_number", prod.ProductNumber, "request_by", uid)
 		c.JSON(http.StatusInternalServerError, gin.H{

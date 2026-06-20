@@ -78,7 +78,7 @@ func TestRepository_Create_and_FindByID(t *testing.T) {
 	require.NoError(t, repo.Create(partner))
 	assert.NotZero(t, partner.ID)
 
-	got, err := repo.FindByID(int(partner.ID))
+	got, err := repo.FindByID(int(partner.ID), 1)
 	require.NoError(t, err)
 	assert.Equal(t, partner.Name, got.Name)
 	assert.Equal(t, partner.PhoneNumber, got.PhoneNumber)
@@ -90,7 +90,7 @@ func TestRepository_Create_and_FindByID(t *testing.T) {
 func TestRepository_FindByID_NotFound(t *testing.T) {
 	repo, _ := setupRepo(t)
 
-	_, err := repo.FindByID(99999)
+	_, err := repo.FindByID(99999, 1)
 	require.Error(t, err)
 }
 
@@ -98,10 +98,18 @@ func TestRepository_Delete(t *testing.T) {
 	repo, db := setupRepo(t)
 	partner := createPartnerForCompany(t, db, 1)
 
-	require.NoError(t, repo.Delete(&partner))
+	require.NoError(t, repo.Delete(&partner, 1))
 
-	_, err := repo.FindByID(int(partner.ID))
+	_, err := repo.FindByID(int(partner.ID), 1)
 	assert.Error(t, err, "partner should no longer exist after delete")
+}
+
+func TestRepository_FindByID_crossCompanyIsolation(t *testing.T) {
+	repo, db := setupRepo(t)
+	partner := createPartnerForCompany(t, db, 1)
+
+	_, err := repo.FindByID(int(partner.ID), 2)
+	require.Error(t, err)
 }
 
 func TestRepository_ReadCompanyPartners(t *testing.T) {
@@ -137,9 +145,9 @@ func TestRepository_Update(t *testing.T) {
 		BusinessPartnerTypeID: bpt2.ID,
 		ContactPhoneNumber:    "09222222222",
 	}
-	require.NoError(t, repo.Update(updated))
+	require.NoError(t, repo.Update(updated, 1))
 
-	got, err := repo.FindByID(int(partner.ID))
+	got, err := repo.FindByID(int(partner.ID), 1)
 	require.NoError(t, err)
 	assert.Equal(t, "Renamed", got.Name)
 	assert.Equal(t, "new@example.com", got.Email)

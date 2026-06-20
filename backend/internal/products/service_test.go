@@ -31,18 +31,18 @@ func TestService_ReadProduct_found(t *testing.T) {
 	c := seedCompany(t, db, "Acme Corp")
 	seedProduct(t, db, c.ID, "Widget", "PRD-001", 9.99)
 
-	info, err := svc.ReadProduct("PRD-001")
+	info, err := svc.ReadProduct("PRD-001", int(c.ID))
 	require.NoError(t, err)
 	assert.Equal(t, "Widget", info.Name)
 	assert.Equal(t, "PRD-001", info.ProductNumber)
 }
 
 func TestService_ReadProduct_notFound(t *testing.T) {
-	svc, _ := setupService(t)
+	svc, db := setupService(t)
+	c := seedCompany(t, db, "Acme Corp")
 
-	info, err := svc.ReadProduct("PRD-MISSING")
-	assert.NoError(t, err)
-	assert.Empty(t, info.Name)
+	_, err := svc.ReadProduct("PRD-MISSING", int(c.ID))
+	assert.Error(t, err)
 }
 
 func TestService_CreateProduct(t *testing.T) {
@@ -72,7 +72,7 @@ func TestService_UpdateProduct(t *testing.T) {
 		ProductNumber: "PRD-001",
 		IsFrozen:      true,
 		DefaultPrice:  19.99,
-	}, 1)
+	}, 1, int(c.ID))
 	require.NoError(t, err)
 
 	var stored Product
@@ -97,7 +97,7 @@ func TestService_UpdateProduct_noChanges(t *testing.T) {
 		ProductNumber: "PRD-001",
 		IsFrozen:      false,
 		DefaultPrice:  9.99,
-	}, 1)
+	}, 1, int(c.ID))
 	assert.Error(t, err)
 	assert.Equal(t, "no changes detected", err.Error())
 }
@@ -107,7 +107,7 @@ func TestService_DeleteProduct(t *testing.T) {
 	c := seedCompany(t, db, "Acme Corp")
 	seedProduct(t, db, c.ID, "Widget", "PRD-001", 9.99)
 
-	err := svc.DeleteProduct("PRD-001")
+	err := svc.DeleteProduct("PRD-001", int(c.ID))
 	require.NoError(t, err)
 
 	var count int64
@@ -126,7 +126,7 @@ func TestService_modifiedFields(t *testing.T) {
 		ProductNumber: "PRD-001",
 		IsFrozen:      true,
 		DefaultPrice:  9.99,
-	})
+	}, int(c.ID))
 
 	assert.Contains(t, changes, "Name")
 	assert.Contains(t, changes, "IsFrozen")

@@ -41,8 +41,9 @@ func (h *Handler) AllOrdersHandler(c *gin.Context) {
 func (h *Handler) OrderInfoHandler(c *gin.Context) {
 	orderId := c.Param("orderID")
 	uid := c.GetInt("user_id")
+	cid := c.GetInt("company_id")
 
-	order, err := h.service.ReadOrder(orderId)
+	order, err := h.service.ReadOrder(orderId, cid)
 
 	if err != nil {
 		slog.Error("order_info - failed", "error", err, "order_id", orderId, "request_by", uid)
@@ -88,6 +89,7 @@ func (h *Handler) OrderCreationHandler(c *gin.Context) {
 func (h *Handler) OrderUpdateHandler(c *gin.Context) {
 	var req UpdateOrderRequest
 	uid := c.GetInt("user_id")
+	cid := c.GetInt("company_id")
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		slog.Error("update_order - validation failed", "error", err, "request_by", uid)
@@ -97,7 +99,7 @@ func (h *Handler) OrderUpdateHandler(c *gin.Context) {
 		})
 		return
 	}
-	err := h.service.UpdateOrder(&req, uid)
+	err := h.service.UpdateOrder(&req, uid, cid)
 	if err != nil {
 		slog.Error("update_order - failed", "error", err, "order_id", req.ID, "request_by", uid)
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -115,8 +117,9 @@ func (h *Handler) OrderUpdateHandler(c *gin.Context) {
 func (h *Handler) OrderDeleteHandler(c *gin.Context) {
 	orderId := c.Param("orderID")
 	uid := c.GetInt("user_id")
+	cid := c.GetInt("company_id")
 
-	order, err := h.service.ReadOrder(orderId)
+	order, err := h.service.ReadOrder(orderId, cid)
 	if err != nil {
 		slog.Error("delete_order - read failed", "error", err, "order_id", orderId, "request_by", uid)
 		c.JSON(http.StatusNotFound, gin.H{
@@ -124,7 +127,7 @@ func (h *Handler) OrderDeleteHandler(c *gin.Context) {
 		})
 		return
 	}
-	err = h.service.DeleteOrder(order.ID)
+	err = h.service.DeleteOrder(order.ID, cid)
 
 	if err != nil {
 		slog.Error("delete_order - failed", "error", err, "order_id", order.ID, "request_by", uid)
@@ -144,8 +147,9 @@ func (h *Handler) OrderDeleteHandler(c *gin.Context) {
 func (h *Handler) OrderApproveHandler(c *gin.Context) {
 	orderId := c.Param("orderID")
 	uid := c.GetInt("user_id")
+	cid := c.GetInt("company_id")
 
-	err := h.service.Approve(orderId)
+	err := h.service.Approve(orderId, cid)
 	if err != nil {
 		slog.Error("order_approve - failed", "error", err, "order_id", orderId, "request_by", uid)
 		c.JSON(http.StatusNotFound, gin.H{
@@ -163,8 +167,9 @@ func (h *Handler) OrderApproveHandler(c *gin.Context) {
 func (h *Handler) OrderPackHandler(c *gin.Context) {
 	orderId := c.Param("orderID")
 	uid := c.GetInt("user_id")
+	cid := c.GetInt("company_id")
 
-	err := h.service.Pack(orderId)
+	err := h.service.Pack(orderId, cid)
 	if err != nil {
 		slog.Error("order_pack - failed", "error", err, "order_id", orderId, "request_by", uid)
 		c.JSON(http.StatusNotFound, gin.H{
@@ -181,8 +186,9 @@ func (h *Handler) OrderPackHandler(c *gin.Context) {
 func (h *Handler) OrderShipHandler(c *gin.Context) {
 	orderId := c.Param("orderID")
 	uid := c.GetInt("user_id")
+	cid := c.GetInt("company_id")
 
-	err := h.service.Ship(orderId)
+	err := h.service.Ship(orderId, cid)
 	if err != nil {
 		slog.Error("order_ship - failed", "error", err, "order_id", orderId, "request_by", uid)
 		c.JSON(http.StatusNotFound, gin.H{
@@ -200,8 +206,9 @@ func (h *Handler) OrderShipHandler(c *gin.Context) {
 func (h *Handler) OrderReceiveHandler(c *gin.Context) {
 	orderId := c.Param("orderID")
 	uid := c.GetInt("user_id")
+	cid := c.GetInt("company_id")
 
-	err := h.service.Receive(orderId)
+	err := h.service.Receive(orderId, cid)
 	if err != nil {
 		slog.Error("order_receive - failed", "error", err, "order_id", orderId, "request_by", uid)
 		c.JSON(http.StatusNotFound, gin.H{
@@ -219,8 +226,9 @@ func (h *Handler) OrderReceiveHandler(c *gin.Context) {
 func (h *Handler) OrderWaitingHandler(c *gin.Context) {
 	orderId := c.Param("orderID")
 	uid := c.GetInt("user_id")
+	cid := c.GetInt("company_id")
 
-	err := h.service.MarkWaiting(orderId)
+	err := h.service.MarkWaiting(orderId, cid)
 	if err != nil {
 		slog.Error("order_wait - failed", "error", err, "order_id", orderId, "request_by", uid)
 		c.JSON(http.StatusNotFound, gin.H{
@@ -238,8 +246,9 @@ func (h *Handler) OrderWaitingHandler(c *gin.Context) {
 func (h *Handler) OrderCancelHandler(c *gin.Context) {
 	orderId := c.Param("orderID")
 	uid := c.GetInt("user_id")
+	cid := c.GetInt("company_id")
 
-	err := h.service.Cancel(orderId)
+	err := h.service.Cancel(orderId, cid)
 	if err != nil {
 		slog.Error("order_cancel - failed", "error", err, "order_id", orderId, "request_by", uid)
 		c.JSON(http.StatusNotFound, gin.H{

@@ -42,7 +42,7 @@ func TestRepository_FindByID(t *testing.T) {
 	c := seedCompany(t, db)
 	user := seedUser(t, db, c.ID, "janedoe", "jane@example.com")
 
-	found, err := repo.FindByID(int(user.ID))
+	found, err := repo.FindByID(int(user.ID), int(c.ID))
 	require.NoError(t, err)
 	assert.Equal(t, "janedoe", found.UserName)
 }
@@ -50,8 +50,19 @@ func TestRepository_FindByID(t *testing.T) {
 func TestRepository_FindByID_notFound(t *testing.T) {
 	db := newTestDB(t)
 	repo := NewRepository(db)
+	c := seedCompany(t, db)
 
-	_, err := repo.FindByID(999)
+	_, err := repo.FindByID(999, int(c.ID))
+	assert.Error(t, err)
+}
+
+func TestRepository_FindByID_crossCompanyIsolation(t *testing.T) {
+	db := newTestDB(t)
+	repo := NewRepository(db)
+	c := seedCompany(t, db)
+	user := seedUser(t, db, c.ID, "crossuser", "cross@example.com")
+
+	_, err := repo.FindByID(int(user.ID), 9999)
 	assert.Error(t, err)
 }
 
@@ -85,7 +96,7 @@ func TestRepository_Update(t *testing.T) {
 	user := seedUser(t, db, c.ID, "janedoe", "jane@example.com")
 
 	user.FullName = "Jane Updated"
-	err := repo.Update(user)
+	err := repo.Update(user, int(c.ID))
 	require.NoError(t, err)
 
 	var stored User
@@ -99,7 +110,7 @@ func TestRepository_Delete(t *testing.T) {
 	c := seedCompany(t, db)
 	user := seedUser(t, db, c.ID, "janedoe", "jane@example.com")
 
-	err := repo.Delete(user)
+	err := repo.Delete(user, int(c.ID))
 	require.NoError(t, err)
 
 	var count int64

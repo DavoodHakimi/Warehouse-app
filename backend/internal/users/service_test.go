@@ -43,18 +43,19 @@ func TestService_ReadUser_found(t *testing.T) {
 	require.NoError(t, db.Create(c).Error)
 	user := seedUser(t, db, c.ID, "janedoe", "jane@example.com")
 
-	info, err := svc.ReadUser(strconv.Itoa(int(user.ID)))
+	info, err := svc.ReadUser(strconv.Itoa(int(user.ID)), int(c.ID))
 	require.NoError(t, err)
 	assert.Equal(t, "janedoe", info.UserName)
 	assert.Equal(t, "jane@example.com", info.Email)
 }
 
 func TestService_ReadUser_notFound(t *testing.T) {
-	svc, _ := setupService(t)
+	svc, db := setupService(t)
+	c := &company.Company{Name: "Acme Corp"}
+	require.NoError(t, db.Create(c).Error)
 
-	info, err := svc.ReadUser("999")
-	assert.NoError(t, err)
-	assert.Empty(t, info.UserName)
+	_, err := svc.ReadUser("999", int(c.ID))
+	assert.Error(t, err)
 }
 
 func TestService_CreateUser(t *testing.T) {
@@ -91,7 +92,7 @@ func TestService_UpdateUser(t *testing.T) {
 		UserTypeID:  1,
 		PhoneNumber: "09123456789",
 		Email:       "updated@example.com",
-	}, int(user.ID))
+	}, int(user.ID), int(c.ID))
 	require.NoError(t, err)
 
 	var stored User
@@ -117,7 +118,7 @@ func TestService_UpdateUser_noChanges(t *testing.T) {
 		UserTypeID:  1,
 		PhoneNumber: "09123456789",
 		Email:       "jane@example.com",
-	}, int(user.ID))
+	}, int(user.ID), int(c.ID))
 	assert.Error(t, err)
 	assert.Equal(t, "no changes detected", err.Error())
 }
@@ -128,7 +129,7 @@ func TestService_DeleteUser(t *testing.T) {
 	require.NoError(t, db.Create(c).Error)
 	user := seedUser(t, db, c.ID, "janedoe", "jane@example.com")
 
-	err := svc.DeleteUser(int(user.ID))
+	err := svc.DeleteUser(int(user.ID), int(c.ID))
 	require.NoError(t, err)
 
 	var count int64
@@ -149,7 +150,7 @@ func TestService_modifiedFields(t *testing.T) {
 		UserTypeID:  2,
 		PhoneNumber: "09123456789",
 		Email:       "jane@example.com",
-	})
+	}, int(c.ID))
 
 	assert.Contains(t, changes, "FullName")
 	assert.Contains(t, changes, "UserTypeID")

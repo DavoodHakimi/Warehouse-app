@@ -43,8 +43,9 @@ func (h *Handler) AllPartnersHandler(c *gin.Context) {
 func (h *Handler) PartnerInfoHandler(c *gin.Context) {
 	partnerId := c.Param("PartnerID")
 	uid := c.GetInt("user_id")
+	companyID := c.GetInt("company_id")
 
-	partner, err := h.service.ReadPartner(partnerId)
+	partner, err := h.service.ReadPartner(partnerId, companyID)
 
 	if err != nil {
 		slog.Error("partner_info - failed", "error", err, "partner_id", partnerId, "request_by", uid)
@@ -93,6 +94,7 @@ func (h *Handler) PartnerCreationHandler(c *gin.Context) {
 func (h *Handler) PartnerUpdateHandler(c *gin.Context) {
 	var req UpdatePartnerRequest
 	uid := c.GetInt("user_id")
+	companyID := c.GetInt("company_id")
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		slog.Error("update_partner - validation failed", "error", err, "request_by", uid)
@@ -102,7 +104,7 @@ func (h *Handler) PartnerUpdateHandler(c *gin.Context) {
 		})
 		return
 	}
-	err := h.service.UpdatePartner(&req, req.ID)
+	err := h.service.UpdatePartner(&req, uid, companyID)
 
 	if err != nil {
 		slog.Error("update_partner - failed", "error", err, "partner_id", req.ID, "request_by", uid)
@@ -120,8 +122,9 @@ func (h *Handler) PartnerUpdateHandler(c *gin.Context) {
 func (h *Handler) PartnerDeleteHandler(c *gin.Context) {
 	partnerId := c.Param("PartnerID")
 	uid := c.GetInt("user_id")
+	companyID := c.GetInt("company_id")
 
-	user, err := h.service.ReadPartner(partnerId)
+	user, err := h.service.ReadPartner(partnerId, companyID)
 
 	if err != nil {
 		slog.Error("delete_partner - read failed", "error", err, "partner_id", partnerId, "request_by", uid)
@@ -131,7 +134,7 @@ func (h *Handler) PartnerDeleteHandler(c *gin.Context) {
 		return
 	}
 
-	err = h.service.DeletePartner(user.ID)
+	err = h.service.DeletePartner(user.ID, companyID)
 	if err != nil {
 		slog.Error("delete_partner - failed", "error", err, "partner_id", user.ID, "request_by", uid)
 		c.JSON(http.StatusInternalServerError, gin.H{

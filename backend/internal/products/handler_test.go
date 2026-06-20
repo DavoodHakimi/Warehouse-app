@@ -23,15 +23,12 @@ func setupHandler(t *testing.T) (*Handler, *gorm.DB) {
 	return NewHandler(NewService(NewRepository(db))), db
 }
 
-func TestHandler_AllProductsHandler_forbidden(t *testing.T) {
-	handler, db := setupHandler(t)
-	c := seedCompany(t, db, "Acme Corp")
+func TestHandler_AllProductsHandler_missingCompanyID(t *testing.T) {
+	handler, _ := setupHandler(t)
 
 	w := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(w)
 	ctx.Request = httptest.NewRequest(http.MethodGet, "/products", nil)
-	ctx.Set("role", 2)
-	ctx.Set("company_id", int(c.ID))
 
 	handler.AllProductsHandler(ctx)
 
@@ -67,6 +64,7 @@ func TestHandler_ProductInfoHandler_success(t *testing.T) {
 	ctx, _ := gin.CreateTestContext(w)
 	ctx.Request = httptest.NewRequest(http.MethodGet, "/products/PRD-001", nil)
 	ctx.Params = gin.Params{{Key: "productNumber", Value: "PRD-001"}}
+	ctx.Set("company_id", int(c.ID))
 
 	handler.ProductInfoHandler(ctx)
 
@@ -123,6 +121,7 @@ func TestHandler_ProductUpdateHandler_success(t *testing.T) {
 	ctx.Request = httptest.NewRequest(http.MethodPatch, "/products/PRD-001", bytes.NewReader(body))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 	ctx.Set("user_id", 1)
+	ctx.Set("company_id", int(c.ID))
 
 	handler.ProductUpdateHandler(ctx)
 
@@ -135,30 +134,6 @@ func TestHandler_ProductUpdateHandler_success(t *testing.T) {
 	assert.Equal(t, 19.99, stored.DefaultPrice)
 }
 
-func TestHandler_ProductUpdateHandler_unauthorized(t *testing.T) {
-	handler, db := setupHandler(t)
-	c := seedCompany(t, db, "Acme Corp")
-	product := seedProduct(t, db, c.ID, "Widget", "PRD-001", 9.99)
-
-	body, err := json.Marshal(UpdateProductRequest{
-		ID:            int(product.ID),
-		Name:          "Updated Widget",
-		ProductNumber: "PRD-001",
-		IsFrozen:      true,
-		DefaultPrice:  19.99,
-	})
-	require.NoError(t, err)
-
-	w := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(w)
-	ctx.Request = httptest.NewRequest(http.MethodPatch, "/products/PRD-001", bytes.NewReader(body))
-	ctx.Request.Header.Set("Content-Type", "application/json")
-
-	handler.ProductUpdateHandler(ctx)
-
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
-}
-
 func TestHandler_ProductDeleteHandler_success(t *testing.T) {
 	handler, db := setupHandler(t)
 	c := seedCompany(t, db, "Acme Corp")
@@ -168,6 +143,7 @@ func TestHandler_ProductDeleteHandler_success(t *testing.T) {
 	ctx, _ := gin.CreateTestContext(w)
 	ctx.Request = httptest.NewRequest(http.MethodDelete, "/products/PRD-001", nil)
 	ctx.Params = gin.Params{{Key: "productNumber", Value: "PRD-001"}}
+	ctx.Set("company_id", int(c.ID))
 
 	handler.ProductDeleteHandler(ctx)
 

@@ -23,9 +23,9 @@ func (r *Repository) ReadCompanyUsers(companyID int) ([]User, error) {
 	return users, nil
 }
 
-func (r *Repository) FindByID(id int) (*User, error) {
+func (r *Repository) FindByID(id int, companyID int) (*User, error) {
 	var user User
-	res := r.db.First(&user, id)
+	res := r.db.Where("company_id = ?", companyID).First(&user, id)
 	if res.Error != nil {
 		return nil, res.Error
 	}
@@ -42,9 +42,9 @@ func (r *Repository) Create(user *User) error {
 	})
 }
 
-func (r *Repository) Update(user *User) error {
+func (r *Repository) Update(user *User, companyID int) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		return tx.Model(&User{}).Where("id = ?", user.ID).Updates(map[string]interface{}{
+		return tx.Model(&User{}).Where("id = ?", user.ID).Where("company_id = ?", companyID).Updates(map[string]interface{}{
 			"full_name":    user.FullName,
 			"user_name":    user.UserName,
 			"email":        user.Email,
@@ -54,9 +54,9 @@ func (r *Repository) Update(user *User) error {
 	})
 }
 
-func (r *Repository) Delete(user *User) error {
+func (r *Repository) Delete(user *User, companyID int) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Delete(user).Error; err != nil {
+		if err := tx.Where("company_id = ?", companyID).Delete(user).Error; err != nil {
 			return err
 		}
 

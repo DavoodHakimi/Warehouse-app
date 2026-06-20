@@ -23,9 +23,9 @@ func (r *Repository) ReadCompanyProducts(companyID int) ([]Product, error) {
 	return products, nil
 }
 
-func (r *Repository) FindByID(pNum string) (*Product, error) {
+func (r *Repository) FindByID(pNum string, companyID int) (*Product, error) {
 	var product Product
-	res := r.db.Where("product_number = ?", pNum).First(&product)
+	res := r.db.Where("company_id = ? AND product_number = ?", companyID, pNum).First(&product)
 	if res.Error != nil {
 		return nil, res.Error
 	}
@@ -42,9 +42,9 @@ func (r *Repository) Create(product *Product) error {
 	})
 }
 
-func (r *Repository) Update(prod *Product) error {
+func (r *Repository) Update(prod *Product, companyID int) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		return tx.Model(&Product{}).Where("id = ?", prod.ID).Updates(map[string]interface{}{
+		return tx.Model(&Product{}).Where("id = ? AND company_id = ?", prod.ID, companyID).Updates(map[string]interface{}{
 			"name":          prod.Name,
 			"is_frozen":     prod.IsFrozen,
 			"default_price": prod.DefaultPrice,
@@ -52,9 +52,9 @@ func (r *Repository) Update(prod *Product) error {
 	})
 }
 
-func (r *Repository) Delete(product *Product) error {
+func (r *Repository) Delete(product *Product, companyID int) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Delete(product).Error; err != nil {
+		if err := tx.Where("company_id = ?", companyID).Delete(product).Error; err != nil {
 			return err
 		}
 
