@@ -31,7 +31,7 @@ func (s *Service) AllOrders(cID int) (*OrdersInfo, error) {
 			OrderNumber:         item.OrderNumber,
 			Status:              item.Status,
 			BusinessPartnerName: item.BusinessPartner.Name,
-			Currency:            item.Currency.Name,
+			Currency:            item.Currency.PersianName,
 			ExchangeRate:        item.ExchangeRate,
 		})
 	}
