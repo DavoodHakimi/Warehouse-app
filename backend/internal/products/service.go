@@ -26,6 +26,7 @@ func (s *Service) AllProducts(cID int) (*ProductsInfo, error) {
 
 	for _, item := range prods {
 		allProducts.Products = append(allProducts.Products, ProductInfoResponse{
+			ID:            int(item.ID),
 			Name:          item.Name,
 			ProductNumber: item.ProductNumber,
 			IsFrozen:      item.IsFrozen,
@@ -35,8 +36,8 @@ func (s *Service) AllProducts(cID int) (*ProductsInfo, error) {
 	return &allProducts, nil
 }
 
-func (s *Service) ReadProduct(productNumber string) (*ProductInfoResponse, error) {
-	prod, err := s.repo.FindByID(productNumber)
+func (s *Service) ReadProduct(productNumber string, companyID int) (*ProductInfoResponse, error) {
+	prod, err := s.repo.FindByID(productNumber, companyID)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +54,7 @@ func (s *Service) CreateProduct(u *ProductRequest, cid int) error {
 
 	prod := Product{
 		Name:          u.Name,
-		ProductNumber: "PRD-" + strconv.Itoa(int(time.Now().Unix())),
+		ProductNumber: "PRD-" + strconv.Itoa(int(time.Now().UnixNano())),
 		IsFrozen:      u.IsFrozen,
 		DefaultPrice:  u.DefaultPrice,
 		CompanyID:     uint(cid),
@@ -61,8 +62,8 @@ func (s *Service) CreateProduct(u *ProductRequest, cid int) error {
 	return s.repo.Create(&prod)
 }
 
-func (s *Service) UpdateProduct(p *UpdateProductRequest, userRequestedID int) error {
-	changedFields := s.modifiedFields(p)
+func (s *Service) UpdateProduct(p *UpdateProductRequest, userRequestedID int, companyID int) error {
+	changedFields := s.modifiedFields(p, companyID)
 	if len(changedFields) == 0 {
 		return errors.New("no changes detected")
 	}
@@ -74,7 +75,7 @@ func (s *Service) UpdateProduct(p *UpdateProductRequest, userRequestedID int) er
 	}
 	prod.ID = uint(p.ID)
 
-	err := s.repo.Update(prod)
+	err := s.repo.Update(prod, companyID)
 	if err != nil {
 		return err
 	}
@@ -93,16 +94,16 @@ func (s *Service) UpdateProduct(p *UpdateProductRequest, userRequestedID int) er
 	return nil
 }
 
-func (s *Service) DeleteProduct(pID string) error {
-	prod, err := s.repo.FindByID(pID)
+func (s *Service) DeleteProduct(pID string, companyID int) error {
+	prod, err := s.repo.FindByID(pID, companyID)
 	if err != nil {
 		return err
 	}
-	return s.repo.Delete(prod)
+	return s.repo.Delete(prod, companyID)
 }
 
-func (s *Service) modifiedFields(p *UpdateProductRequest) map[string][2]string {
-	oldValues, err := s.repo.FindByID(p.ProductNumber)
+func (s *Service) modifiedFields(p *UpdateProductRequest, companyID int) map[string][2]string {
+	oldValues, err := s.repo.FindByID(p.ProductNumber, companyID)
 	if err != nil {
 		return nil
 	}

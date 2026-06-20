@@ -26,6 +26,7 @@ func (s *Service) AllUsers(cID int) (*UsersInfo, error) {
 
 	for _, item := range users {
 		allUsers.Users = append(allUsers.Users, UserInfoResponse{
+			ID:          int(item.ID),
 			FullName:    item.FullName,
 			UserName:    item.UserName,
 			Email:       item.Email,
@@ -36,9 +37,9 @@ func (s *Service) AllUsers(cID int) (*UsersInfo, error) {
 	return &allUsers, nil
 }
 
-func (s *Service) ReadUser(userID string) (*UserInfoResponse, error) {
+func (s *Service) ReadUser(userID string, companyID int) (*UserInfoResponse, error) {
 	val, _ := strconv.Atoi(userID)
-	user, err := s.repo.FindByID(val)
+	user, err := s.repo.FindByID(val, companyID)
 	if err != nil {
 		return nil, err
 	}
@@ -70,8 +71,8 @@ func (s *Service) CreateUser(u *CreateUserRequest, cid int) error {
 	return s.repo.Create(&user)
 }
 
-func (s *Service) UpdateUser(u *UpdateUserRequest, userRequestedID int) error {
-	changedFields := s.modifiedFields(u)
+func (s *Service) UpdateUser(u *UpdateUserRequest, userRequestedID int, companyID int) error {
+	changedFields := s.modifiedFields(u, companyID)
 	if len(changedFields) == 0 {
 		return errors.New("no changes detected")
 	}
@@ -85,7 +86,7 @@ func (s *Service) UpdateUser(u *UpdateUserRequest, userRequestedID int) error {
 	}
 	user.ID = uint(u.ID)
 
-	err := s.repo.Update(user)
+	err := s.repo.Update(user, companyID)
 	if err != nil {
 		return err
 	}
@@ -104,16 +105,16 @@ func (s *Service) UpdateUser(u *UpdateUserRequest, userRequestedID int) error {
 	return nil
 }
 
-func (s *Service) DeleteUser(uID int) error {
-	user, err := s.repo.FindByID(uID)
+func (s *Service) DeleteUser(uID int, companyID int) error {
+	user, err := s.repo.FindByID(uID, companyID)
 	if err != nil {
 		return err
 	}
-	return s.repo.Delete(user)
+	return s.repo.Delete(user, companyID)
 }
 
-func (s *Service) modifiedFields(u *UpdateUserRequest) map[string][2]string {
-	oldValues, err := s.repo.FindByID(u.ID)
+func (s *Service) modifiedFields(u *UpdateUserRequest, companyID int) map[string][2]string {
+	oldValues, err := s.repo.FindByID(u.ID, companyID)
 	if err != nil {
 		return nil
 	}

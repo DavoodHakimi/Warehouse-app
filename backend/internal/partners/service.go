@@ -25,6 +25,7 @@ func (s *Service) AllPartners(cID int) (*PartnersInfo, error) {
 
 	for _, item := range partners {
 		allPartners.Partners = append(allPartners.Partners, PartnerInfoResponse{
+			ID:                  int(item.ID),
 			Name:                item.Name,
 			BusinessPartnerType: item.BusinessPartnerType.Name,
 			Email:               item.Email,
@@ -36,9 +37,9 @@ func (s *Service) AllPartners(cID int) (*PartnersInfo, error) {
 	return &allPartners, nil
 }
 
-func (s *Service) ReadPartner(partnerID string) (*PartnerInfoResponse, error) {
+func (s *Service) ReadPartner(partnerID string, companyID int) (*PartnerInfoResponse, error) {
 	val, _ := strconv.Atoi(partnerID)
-	partner, err := s.repo.FindByID(val)
+	partner, err := s.repo.FindByID(val, companyID)
 	if err != nil {
 		return nil, err
 	}
@@ -67,8 +68,8 @@ func (s *Service) CreatePartner(p *CreatePartnerRequest, cid int) error {
 	return s.repo.Create(&partner)
 }
 
-func (s *Service) UpdatePartner(p *UpdatePartnerRequest, userRequestedID int) error {
-	changedFields := s.modifiedFields(p)
+func (s *Service) UpdatePartner(p *UpdatePartnerRequest, userRequestedID int, companyID int) error {
+	changedFields := s.modifiedFields(p, companyID)
 	if len(changedFields) == 0 {
 		return errors.New("no changes detected")
 	}
@@ -83,7 +84,7 @@ func (s *Service) UpdatePartner(p *UpdatePartnerRequest, userRequestedID int) er
 	}
 	partner.ID = uint(p.ID)
 
-	err := s.repo.Update(partner)
+	err := s.repo.Update(partner, companyID)
 	if err != nil {
 		return err
 	}
@@ -102,16 +103,16 @@ func (s *Service) UpdatePartner(p *UpdatePartnerRequest, userRequestedID int) er
 	return nil
 }
 
-func (s *Service) DeletePartner(pID int) error {
-	partner, err := s.repo.FindByID(pID)
+func (s *Service) DeletePartner(pID int, companyID int) error {
+	partner, err := s.repo.FindByID(pID, companyID)
 	if err != nil {
 		return err
 	}
-	return s.repo.Delete(partner)
+	return s.repo.Delete(partner, companyID)
 }
 
-func (s *Service) modifiedFields(p *UpdatePartnerRequest) map[string][2]string {
-	oldValues, err := s.repo.FindByID(p.ID)
+func (s *Service) modifiedFields(p *UpdatePartnerRequest, companyID int) map[string][2]string {
+	oldValues, err := s.repo.FindByID(p.ID, companyID)
 	if err != nil {
 		return nil
 	}

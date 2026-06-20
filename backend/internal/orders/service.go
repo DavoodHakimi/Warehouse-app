@@ -26,6 +26,7 @@ func (s *Service) AllOrders(cID int) (*OrdersInfo, error) {
 
 	for _, item := range orders {
 		allOrders.Orders = append(allOrders.Orders, OrderInfoResponse{
+			ID:                  uint(item.ID),
 			OrderType:           item.OrderType,
 			OrderNumber:         item.OrderNumber,
 			Status:              item.Status,
@@ -37,8 +38,8 @@ func (s *Service) AllOrders(cID int) (*OrdersInfo, error) {
 	return &allOrders, nil
 }
 
-func (s *Service) ReadOrder(orderID string) (*OrderInfoResponse, error) {
-	order, _, err := s.CheckOrderExist(orderID)
+func (s *Service) ReadOrder(orderID string, companyID int) (*OrderInfoResponse, error) {
+	order, _, err := s.CheckOrderExist(orderID, companyID)
 	if err != nil {
 		return nil, err
 	}
@@ -74,8 +75,8 @@ func (s *Service) CreateOrder(o *CreateOrderRequest, cid int) error {
 	return s.repo.Create(&order)
 }
 
-func (s *Service) UpdateOrder(o *UpdateOrderRequest, userRequestedID int) error {
-	changedFields := s.modifiedFields(o)
+func (s *Service) UpdateOrder(o *UpdateOrderRequest, userRequestedID int, companyID int) error {
+	changedFields := s.modifiedFields(o, companyID)
 	if len(changedFields) == 0 {
 		return errors.New("no changes detected")
 	}
@@ -87,7 +88,13 @@ func (s *Service) UpdateOrder(o *UpdateOrderRequest, userRequestedID int) error 
 		ExchangeRate:      o.ExchangeRate,
 	}
 	order.ID = uint(o.ID)
-	err := s.repo.Update(&order)
+
+	existing, err := s.repo.FindByID(order.ID, uint(companyID))
+	if err != nil {
+		return err
+	}
+	order.Status = existing.Status
+	err = s.repo.Update(&order, uint(companyID))
 	if err != nil {
 		return err
 	}
@@ -105,8 +112,8 @@ func (s *Service) UpdateOrder(o *UpdateOrderRequest, userRequestedID int) error 
 	}
 	return nil
 }
-func (s *Service) modifiedFields(o *UpdateOrderRequest) map[string][2]string {
-	oldValues, err := s.repo.FindByID(o.ID)
+func (s *Service) modifiedFields(o *UpdateOrderRequest, cid int) map[string][2]string {
+	oldValues, err := s.repo.FindByID(o.ID, uint(cid))
 	if err != nil {
 		return nil
 	}
@@ -128,9 +135,9 @@ func (s *Service) modifiedFields(o *UpdateOrderRequest) map[string][2]string {
 	return changes
 }
 
-func (s *Service) DeleteOrder(orderID uint) error {
+func (s *Service) DeleteOrder(orderID uint, companyID int) error {
 
-	order, err := s.repo.FindByID(orderID)
+	order, err := s.repo.FindByID(orderID, uint(companyID))
 	if err != nil {
 		return errors.New("Order Not found")
 	}
@@ -138,8 +145,8 @@ func (s *Service) DeleteOrder(orderID uint) error {
 	return s.repo.Delete(order)
 }
 
-func (s *Service) Approve(orderID string) error {
-	order, val, err := s.CheckOrderExist(orderID)
+func (s *Service) Approve(orderID string, companyID int) error {
+	order, val, err := s.CheckOrderExist(orderID, companyID)
 	if err != nil {
 		return err
 	}
@@ -154,8 +161,8 @@ func (s *Service) Approve(orderID string) error {
 	return s.repo.StatusUpdate(uint(val), "Approved")
 }
 
-func (s *Service) Pack(orderID string) error {
-	order, val, err := s.CheckOrderExist(orderID)
+func (s *Service) Pack(orderID string, companyID int) error {
+	order, val, err := s.CheckOrderExist(orderID, companyID)
 	if err != nil {
 		return err
 	}
@@ -166,8 +173,8 @@ func (s *Service) Pack(orderID string) error {
 	return s.repo.StatusUpdate(uint(val), "Packed")
 }
 
-func (s *Service) Ship(orderID string) error {
-	order, val, err := s.CheckOrderExist(orderID)
+func (s *Service) Ship(orderID string, companyID int) error {
+	order, val, err := s.CheckOrderExist(orderID, companyID)
 	if err != nil {
 		return err
 	}
@@ -179,8 +186,8 @@ func (s *Service) Ship(orderID string) error {
 	return s.repo.ShipSaleTransaction(uint(val), order.OrderItems)
 }
 
-func (s *Service) MarkWaiting(orderID string) error {
-	order, val, err := s.CheckOrderExist(orderID)
+func (s *Service) MarkWaiting(orderID string, companyID int) error {
+	order, val, err := s.CheckOrderExist(orderID, companyID)
 	if err != nil {
 		return err
 	}
@@ -191,8 +198,8 @@ func (s *Service) MarkWaiting(orderID string) error {
 	return s.repo.StatusUpdate(uint(val), "Waiting")
 }
 
-func (s *Service) Receive(orderID string) error {
-	order, val, err := s.CheckOrderExist(orderID)
+func (s *Service) Receive(orderID string, companyID int) error {
+	order, val, err := s.CheckOrderExist(orderID, companyID)
 	if err != nil {
 		return err
 	}
@@ -204,8 +211,8 @@ func (s *Service) Receive(orderID string) error {
 	return s.repo.ReceivePurchaseTransaction(uint(val), order.OrderItems)
 }
 
-func (s *Service) Cancel(orderID string) error {
-	order, val, err := s.CheckOrderExist(orderID)
+func (s *Service) Cancel(orderID string, companyID int) error {
+	order, val, err := s.CheckOrderExist(orderID, companyID)
 	if err != nil {
 		return err
 	}
@@ -222,12 +229,12 @@ func (s *Service) Cancel(orderID string) error {
 	return s.repo.CancelSaleTransaction(uint(val), order.OrderItems)
 }
 
-func (s *Service) CheckOrderExist(orderID string) (*Order, int, error) {
+func (s *Service) CheckOrderExist(orderID string, companyID int) (*Order, int, error) {
 	val, err := strconv.Atoi(orderID)
 	if err != nil {
 		return nil, val, errors.New("Invalid Order ID")
 	}
-	order, err := s.repo.FindByID(uint(val))
+	order, err := s.repo.FindByID(uint(val), uint(companyID))
 	if err != nil {
 		return nil, val, err
 	}
