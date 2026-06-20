@@ -20,7 +20,7 @@ func (s *Service) AllPartners(cID int) (*PartnersInfo, error) {
 	allPartners := PartnersInfo{Partners: make([]PartnerInfoResponse, 0, len(partners))}
 
 	if err != nil {
-		return &allPartners, err
+		return nil, err
 	}
 
 	for _, item := range partners {
@@ -40,7 +40,7 @@ func (s *Service) ReadPartner(partnerID string) (*PartnerInfoResponse, error) {
 	val, _ := strconv.Atoi(partnerID)
 	partner, err := s.repo.FindByID(val)
 	if err != nil {
-		return &PartnerInfoResponse{}, nil
+		return nil, err
 	}
 	return &PartnerInfoResponse{
 		ID:                  int(partner.ID),

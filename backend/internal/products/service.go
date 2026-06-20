@@ -21,7 +21,7 @@ func (s *Service) AllProducts(cID int) (*ProductsInfo, error) {
 	allProducts := ProductsInfo{Products: make([]ProductInfoResponse, 0, len(prods))}
 
 	if err != nil {
-		return &allProducts, err
+		return nil, err
 	}
 
 	for _, item := range prods {
@@ -38,7 +38,7 @@ func (s *Service) AllProducts(cID int) (*ProductsInfo, error) {
 func (s *Service) ReadProduct(productNumber string) (*ProductInfoResponse, error) {
 	prod, err := s.repo.FindByID(productNumber)
 	if err != nil {
-		return &ProductInfoResponse{}, nil
+		return nil, err
 	}
 	return &ProductInfoResponse{
 		ID:            int(prod.ID),

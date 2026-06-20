@@ -21,7 +21,7 @@ func (s *Service) AllUsers(cID int) (*UsersInfo, error) {
 	allUsers := UsersInfo{Users: make([]UserInfoResponse, 0, len(users))}
 
 	if err != nil {
-		return &allUsers, err
+		return nil, err
 	}
 
 	for _, item := range users {
@@ -40,7 +40,7 @@ func (s *Service) ReadUser(userID string) (*UserInfoResponse, error) {
 	val, _ := strconv.Atoi(userID)
 	user, err := s.repo.FindByID(val)
 	if err != nil {
-		return &UserInfoResponse{}, nil
+		return nil, err
 	}
 	return &UserInfoResponse{
 		ID:          int(user.ID),
