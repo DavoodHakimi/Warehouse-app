@@ -45,12 +45,12 @@ func (r *Repository) Create(partner *BusinessPartner) error {
 func (r *Repository) Update(partner *BusinessPartner) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		return tx.Model(&BusinessPartner{}).Where("id = ?", partner.ID).Updates(map[string]interface{}{
-			"name":                 partner.Name,
-			"email":                partner.Email,
-			"phone_number":         partner.PhoneNumber,
-			"partner_type_id":      partner.BusinessPartnerTypeID,
-			"contact_name":         partner.ContactName,
-			"contact_phone_number": partner.ContactPhoneNumber,
+			"name":                     partner.Name,
+			"email":                    partner.Email,
+			"phone_number":             partner.PhoneNumber,
+			"business_partner_type_id": partner.BusinessPartnerTypeID,
+			"contact_name":             partner.ContactName,
+			"contact_phone_number":     partner.ContactPhoneNumber,
 		}).Error
 	})
 }
