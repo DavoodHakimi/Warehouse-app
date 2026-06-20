@@ -107,7 +107,7 @@ export default function OrdersPage() {
                 <TableHead className="text-right">شماره سفارش</TableHead>
                 <TableHead className="text-right">نوع</TableHead>
                 <TableHead className="text-right">شریک تجاری</TableHead>
-                <TableHead className="text-right">واحد پول</TableHead>
+                <TableHead className="text-right">ارز</TableHead>
                 <TableHead className="text-right">وضعیت</TableHead>
                 <TableHead className="text-right">عملیات</TableHead>
               </TableRow>

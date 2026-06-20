@@ -341,7 +341,7 @@ export function OrderFormDialog({ open, onOpenChange, order, onSaved }: Props) {
             <div className="flex items-center justify-between border-t border-border pt-2 text-sm">
               <span className="text-muted-foreground">جمع کل</span>
               <span className="font-bold text-foreground">
-                {formatPrice(total)}
+                {formatPrice(total, CURRENCY_OPTIONS.find((c) => String(c.value) === currency)?.label)}
               </span>
             </div>
           </div>
