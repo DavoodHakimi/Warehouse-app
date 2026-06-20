@@ -14,9 +14,9 @@ type OrderInfoResponse struct {
 }
 type CreateOrderRequest struct {
 	OrderType         string         `binding:"required" json:"order_type"`
-	BusinessPartnerID uint           `binding:"required,numerical" json:"business_partner_name"`
-	CurrencyID        uint           `binding:"required,numerical" json:"currency"`
-	ExchangeRate      float64        `binding:"required," json:"exchange_rate"`
+	BusinessPartnerID uint           `binding:"required,numeric" json:"business_partner_name"`
+	CurrencyID        uint           `binding:"required,numeric" json:"currency"`
+	ExchangeRate      float64        `binding:"required" json:"exchange_rate"`
 	OrderItems        []OrderItemReq `binding:"required" json:"order_items"`
 }
 
@@ -29,7 +29,7 @@ type UpdateOrderRequest struct {
 	ID                uint    `binding:"required" json:"id"`
 	OrderNumber       string  `json:"order_number"`
 	OrderType         string  `binding:"required" json:"order_type"`
-	BusinessPartnerID uint    `binding:"required,numerical" json:"business_partner_name"`
-	CurrencyID        uint    `binding:"required,numerical" json:"currency"`
-	ExchangeRate      float64 `binding:"required," json:"exchange_rate"`
+	BusinessPartnerID uint    `binding:"required,numeric" json:"business_partner_name"`
+	CurrencyID        uint    `binding:"required,numeric" json:"currency"`
+	ExchangeRate      float64 `binding:"required" json:"exchange_rate"`
 }
