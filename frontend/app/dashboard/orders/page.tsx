@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Trash2, ChevronDown, ArrowRightLeft } from 'lucide-react'
+import { Plus, Trash2, ChevronDown, ArrowRightLeft, Pencil, } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/page-header'
 import { DataError, EmptyState, TableSkeleton } from '@/components/data-states'
@@ -40,11 +40,13 @@ export default function OrdersPage() {
   const { data, error, loading, refetch } =
     useApi<{ orders: Order[] }>('/orders/')
   const [formOpen, setFormOpen] = useState(false)
+  const [formEdit, setFormEdit] = useState<Order | null>(null)
   const [deleting, setDeleting] = useState<Order | null>(null)
   const [pendingAction, setPendingAction] = useState<string | null>(null)
 
   const orders = data?.orders ?? []
   const canCreate = can('orders.create')
+  const canUpdate = can('orders.update')
   const canDelete = can('orders.delete')
 
   async function runTransition(order: Order, action: string, label: string) {
@@ -63,6 +65,7 @@ export default function OrdersPage() {
   async function handleDelete() {
     if (!deleting) return
     try {
+      console.log(deleting.id)
       await apiFetch(`/orders/${deleting.id}`, { method: 'DELETE' })
       toast.success('سفارش حذف شد.')
       setDeleting(null)
@@ -79,7 +82,7 @@ export default function OrdersPage() {
         description="مدیریت سفارش‌های خرید و فروش و گردش وضعیت آن‌ها."
         action={
           canCreate ? (
-            <Button onClick={() => setFormOpen(true)}>
+            <Button onClick={() => { setFormOpen(true); setFormEdit(null) }}>
               <Plus className="size-4" />
               ثبت سفارش
             </Button>
@@ -106,7 +109,7 @@ export default function OrdersPage() {
                 <TableHead className="text-right">شریک تجاری</TableHead>
                 <TableHead className="text-right">واحد پول</TableHead>
                 <TableHead className="text-right">وضعیت</TableHead>
-                <TableHead className="text-left">عملیات</TableHead>
+                <TableHead className="text-right">عملیات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -174,6 +177,16 @@ export default function OrdersPage() {
                             </DropdownMenuContent>
                           </DropdownMenu>
                         )}
+                        {canUpdate && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setFormEdit(order)}
+                            aria-label="ویرایش"
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
+                        )}
                         {canDelete && (
                           <Button
                             variant="ghost"
@@ -196,8 +209,14 @@ export default function OrdersPage() {
       )}
 
       <OrderFormDialog
-        open={formOpen}
-        onOpenChange={setFormOpen}
+        open={formOpen || Boolean(formEdit)}
+        onOpenChange={(o) => {
+          if (!o) {
+            setFormOpen(false)
+            setFormEdit(null)
+          }
+        }}
+        order={formEdit}
         onSaved={refetch}
       />
 

@@ -24,11 +24,12 @@ import {
 import { apiFetch, ApiError } from '@/lib/api'
 import { CURRENCY_OPTIONS, ORDER_TYPES } from '@/lib/constants'
 import { formatPrice } from '@/lib/utils'
-import type { Partner, Product } from '@/lib/types'
+import type { Order, Partner, Product } from '@/lib/types'
 
 type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  order?: Order | null
   onSaved: () => void
 }
 
@@ -36,7 +37,8 @@ type Item = { product_id: string; quantity: string; per_item_price: string }
 
 const emptyItem: Item = { product_id: '', quantity: '1', per_item_price: '' }
 
-export function OrderFormDialog({ open, onOpenChange, onSaved }: Props) {
+export function OrderFormDialog({ open, onOpenChange, order, onSaved }: Props) {
+  const isEdit = Boolean(order)
   const [orderType, setOrderType] = useState('sale')
   const [partnerId, setPartnerId] = useState('')
   const [currency, setCurrency] = useState('1')
@@ -49,10 +51,10 @@ export function OrderFormDialog({ open, onOpenChange, onSaved }: Props) {
 
   useEffect(() => {
     if (!open) return
-    setOrderType('sale')
+    setOrderType(order?.order_type ?? 'sale')
     setPartnerId('')
     setCurrency('1')
-    setExchangeRate('1')
+    setExchangeRate(String(order?.exchange_rate ?? '1'))
     setItems([{ ...emptyItem }])
 
     apiFetch<{ products: Product[] }>('/products/')
@@ -63,6 +65,24 @@ export function OrderFormDialog({ open, onOpenChange, onSaved }: Props) {
       .then((res) => setPartners(res.partners ?? []))
       .catch(() => setPartners(null))
   }, [open])
+
+  useEffect(() => {
+    if (!open || !order || !partners) return
+    setOrderType(order.order_type)
+    setExchangeRate(String(order.exchange_rate))
+
+    const partnerMatch = partners.find(
+      (p) => p.name === order.business_partner_name,
+    )
+    if (partnerMatch) setPartnerId(String(partnerMatch.id))
+
+    const currencyNameToId: Record<string, string> = {
+      Rial: '1',
+      Dollar: '2',
+      Euro: '3',
+    }
+    setCurrency(currencyNameToId[order.currency] ?? '1')
+  }, [open, order, partners])
 
   function updateItem(index: number, key: keyof Item, value: string) {
     setItems((prev) =>
@@ -96,25 +116,34 @@ export function OrderFormDialog({ open, onOpenChange, onSaved }: Props) {
 
     setSaving(true)
     try {
-      await apiFetch('/orders/', {
-        method: 'POST',
-        body: {
-          order_type: orderType,
-          business_partner_name: Number(partnerId),
-          currency: Number(currency),
-          exchange_rate: Number(exchangeRate),
-          order_items: items.map((it) => ({
-            product_id: Number(it.product_id),
-            quantity: Number(it.quantity),
-            per_item_price: Number(it.per_item_price),
-          })),
-        },
-      })
-      toast.success('سفارش جدید ثبت شد.')
+      const body = {
+        order_type: orderType,
+        business_partner_name: Number(partnerId),
+        currency: Number(currency),
+        exchange_rate: Number(exchangeRate),
+        order_items: items.map((it) => ({
+          product_id: Number(it.product_id),
+          quantity: Number(it.quantity),
+          per_item_price: Number(it.per_item_price),
+        })),
+      }
+      if (isEdit && order) {
+        await apiFetch(`/orders/${order.id}`, {
+          method: 'PATCH',
+          body: { id: order.id, ...body },
+        })
+        toast.success('سفارش ویرایش شد.')
+      } else {
+        await apiFetch('/orders/', {
+          method: 'POST',
+          body,
+        })
+        toast.success('سفارش جدید ثبت شد.')
+      }
       onSaved()
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'خطا در ثبت سفارش.')
+      toast.error(err instanceof ApiError ? err.message : 'خطا در ذخیره سفارش.')
     } finally {
       setSaving(false)
     }
@@ -124,9 +153,13 @@ export function OrderFormDialog({ open, onOpenChange, onSaved }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>ثبت سفارش جدید</DialogTitle>
+          <DialogTitle>
+            {isEdit ? 'ویرایش سفارش' : 'ثبت سفارش جدید'}
+          </DialogTitle>
           <DialogDescription>
-            نوع سفارش، شریک تجاری و اقلام را مشخص کنید.
+            {isEdit
+              ? 'اطلاعات سفارش را ویرایش کنید.'
+              : 'نوع سفارش، شریک تجاری و اقلام را مشخص کنید.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -138,7 +171,7 @@ export function OrderFormDialog({ open, onOpenChange, onSaved }: Props) {
                 <SelectTrigger id="order_type">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent align="start">
                   {Object.entries(ORDER_TYPES).map(([value, label]) => (
                     <SelectItem key={value} value={value}>
                       {label}
@@ -153,9 +186,11 @@ export function OrderFormDialog({ open, onOpenChange, onSaved }: Props) {
               {partners ? (
                 <Select value={partnerId} onValueChange={setPartnerId}>
                   <SelectTrigger id="partner">
-                    <SelectValue placeholder="انتخاب شریک" />
+                    <SelectValue placeholder="انتخاب شریک">
+                      {partners?.find((p) => String(p.id) === partnerId)?.name}
+                    </SelectValue>
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent align="start">
                     {partners.map((p) => (
                       <SelectItem key={p.id} value={String(p.id)}>
                         {p.name}
@@ -181,9 +216,11 @@ export function OrderFormDialog({ open, onOpenChange, onSaved }: Props) {
               <Label htmlFor="currency">واحد پول</Label>
               <Select value={currency} onValueChange={setCurrency}>
                 <SelectTrigger id="currency">
-                  <SelectValue />
+                  <SelectValue>
+                    {CURRENCY_OPTIONS.find((c) => String(c.value) === currency)?.label}
+                  </SelectValue>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent align="start">
                   {CURRENCY_OPTIONS.map((c) => (
                     <SelectItem key={c.value} value={String(c.value)}>
                       {c.label}
@@ -194,7 +231,7 @@ export function OrderFormDialog({ open, onOpenChange, onSaved }: Props) {
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="exchange_rate">نرخ تبدیل</Label>
+              <Label htmlFor="exchange_rate">نرخ تبدیل به ریال</Label>
               <Input
                 id="exchange_rate"
                 type="number"
@@ -236,7 +273,7 @@ export function OrderFormDialog({ open, onOpenChange, onSaved }: Props) {
                     <SelectTrigger>
                       <SelectValue placeholder="انتخاب محصول" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent align="start">
                       {products
                         .filter((p) => !p.is_frozen)
                         .map((p) => (
@@ -308,7 +345,7 @@ export function OrderFormDialog({ open, onOpenChange, onSaved }: Props) {
             </Button>
             <Button type="submit" disabled={saving}>
               {saving && <Loader2 className="size-4 animate-spin" />}
-              ثبت سفارش
+              {isEdit ? 'ذخیره تغییرات' : 'ثبت سفارش'}
             </Button>
           </DialogFooter>
         </form>
