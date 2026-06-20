@@ -13,11 +13,12 @@ type OrderInfoResponse struct {
 	ExchangeRate        float64 `json:"exchange_rate"`
 }
 type CreateOrderRequest struct {
-	OrderType         string         `binding:"required" json:"order_type"`
-	BusinessPartnerID uint           `binding:"required,numeric" json:"business_partner_name"`
-	CurrencyID        uint           `binding:"required,numeric" json:"currency"`
-	ExchangeRate      float64        `binding:"required" json:"exchange_rate"`
-	OrderItems        []OrderItemReq `binding:"required" json:"order_items"`
+	OrderType             string         `binding:"required" json:"order_type"`
+	BusinessPartnerID     uint           `binding:"required,numeric" json:"business_partner_name"`
+	BusinessPartnerTypeId uint           `binding:"required,numeric" json:"business_partner_type_id"`
+	CurrencyID            uint           `binding:"required,numeric" json:"currency"`
+	ExchangeRate          float64        `binding:"required" json:"exchange_rate"`
+	OrderItems            []OrderItemReq `binding:"required" json:"order_items"`
 }
 
 type OrderItemReq struct {

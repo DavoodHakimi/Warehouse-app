@@ -55,6 +55,11 @@ func (s *Service) ReadOrder(orderID string, companyID int) (*OrderInfoResponse, 
 }
 
 func (s *Service) CreateOrder(o *CreateOrderRequest, cid int) error {
+	err := s.CheckCompanyOrderType(o.BusinessPartnerTypeId, o.OrderType)
+	if err != nil {
+		return err
+	}
+
 	allItems := make([]OrderItem, 0, len(o.OrderItems))
 	for _, item := range o.OrderItems {
 		allItems = append(allItems, OrderItem{
@@ -240,4 +245,16 @@ func (s *Service) CheckOrderExist(orderID string, companyID int) (*Order, int, e
 		return nil, val, err
 	}
 	return order, val, nil
+}
+
+func (s *Service) CheckCompanyOrderType(companyTypeId uint, orderType string) error {
+	if (orderType == "sale") && (companyTypeId == 1) { // 1 is Supplier Check data.go
+		return errors.New("Can not sell to supplier")
+	} else if (orderType == "purchase") && (companyTypeId == 2) { // 2 is Customer Check data.go
+		return errors.New("Can not buy from Customer")
+	} else if (orderType != "sale") && (orderType != "purchase") {
+		return errors.New("Invalid Order Type")
+	} else {
+		return nil
+	}
 }
