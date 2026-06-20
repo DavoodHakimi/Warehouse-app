@@ -21,7 +21,7 @@ import {
 import { useApi } from '@/lib/use-api'
 import { apiFetch, ApiError } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
-import { PARTNER_TYPE_LABELS } from '@/lib/constants'
+import { PARTNER_TYPE_LABELS, PARTNER_TYPE_OPTIONS } from '@/lib/constants'
 import type { Partner } from '@/lib/types'
 
 export default function PartnersPage() {
@@ -94,7 +94,7 @@ export default function PartnersPage() {
                 <TableHead className="text-right">ایمیل</TableHead>
                 <TableHead className="text-right">شخص رابط</TableHead>
                 {(canUpdate || canDelete) && (
-                  <TableHead className="text-left">عملیات</TableHead>
+                  <TableHead className="text-right">عملیات</TableHead>
                 )}
               </TableRow>
             </TableHeader>
@@ -104,8 +104,7 @@ export default function PartnersPage() {
                   <TableCell className="font-medium">{partner.name}</TableCell>
                   <TableCell>
                     <Badge variant="secondary">
-                      {PARTNER_TYPE_LABELS[partner.business_partner_type] ??
-                        partner.business_partner_type}
+                      {PARTNER_TYPE_OPTIONS.find(t => t.label === partner.business_partner_type)?.label}{partner.business_partner_type}
                     </Badge>
                   </TableCell>
                   <TableCell dir="ltr" className="text-right">

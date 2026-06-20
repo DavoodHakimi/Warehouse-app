@@ -162,7 +162,9 @@ export function PartnerFormDialog({
                 }
               >
                 <SelectTrigger id="type">
-                  <SelectValue placeholder="انتخاب نوع" />
+                  <SelectValue placeholder="انتخاب نوع">
+                    {PARTNER_TYPE_OPTIONS.find(t => t.value === form.business_partner_type_id)?.label}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {PARTNER_TYPE_OPTIONS.map((t) => (
