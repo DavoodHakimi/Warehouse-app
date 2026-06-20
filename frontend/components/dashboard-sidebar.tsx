@@ -17,6 +17,7 @@ import { useAuth } from '@/lib/auth'
 import { NAV_ITEMS } from '@/lib/nav'
 import { ROLES } from '@/lib/constants'
 import { Button } from '@/components/ui/button'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 const ICONS: Record<string, LucideIcon> = {
   LayoutDashboard,
@@ -71,6 +72,10 @@ export function DashboardSidebar({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <div className="border-t border-sidebar-border p-3">
+        <div className="flex items-center justify-between rounded-lg px-3 py-1">
+          <span className="text-xs text-muted-foreground">تغییر تم</span>
+          <ThemeToggle />
+        </div>
         <div className="mb-2 flex items-center gap-3 rounded-lg px-3 py-2">
           <div className="flex size-9 items-center justify-center rounded-full bg-accent text-accent-foreground text-sm font-bold">
             {user?.username?.[0]?.toUpperCase() ?? '؟'}
