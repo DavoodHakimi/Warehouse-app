@@ -93,7 +93,7 @@ export default function UsersPage() {
                 <TableHead className="text-right">شماره تماس</TableHead>
                 <TableHead className="text-right">ایمیل</TableHead>
                 {(canUpdate || canDelete) && (
-                  <TableHead className="text-left">عملیات</TableHead>
+                  <TableHead className="text-right">عملیات</TableHead>
                 )}
               </TableRow>
             </TableHeader>
