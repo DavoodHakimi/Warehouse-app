@@ -45,6 +45,7 @@ func (s *Service) ReadOrder(orderID string, companyID int) (*OrderInfoResponse, 
 	}
 
 	return &OrderInfoResponse{
+		ID:                  order.ID,
 		OrderType:           order.OrderType,
 		OrderNumber:         order.OrderNumber,
 		Status:              order.Status,
