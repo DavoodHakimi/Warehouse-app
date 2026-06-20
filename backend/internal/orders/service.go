@@ -86,13 +86,14 @@ func (s *Service) UpdateOrder(o *UpdateOrderRequest, userRequestedID int) error 
 		CurrencyID:        o.CurrencyID,
 		ExchangeRate:      o.ExchangeRate,
 	}
+	order.ID = uint(o.ID)
 	err := s.repo.Update(&order)
 	if err != nil {
 		return err
 	}
 	for field, values := range changedFields {
 		log := audit.Log{
-			EntityType: "product",
+			EntityType: "order",
 			EntityID:   uint(o.ID),
 			Event:      "updated",
 			Field:      field,
