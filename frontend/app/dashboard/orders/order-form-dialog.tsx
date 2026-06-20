@@ -26,6 +26,12 @@ import { CURRENCY_OPTIONS, ORDER_TYPES } from '@/lib/constants'
 import { formatPrice } from '@/lib/utils'
 import type { Order, Partner, Product } from '@/lib/types'
 
+const TYPE_NAME_TO_ID: Record<string, number> = {
+  Supplier: 1,
+  Customer: 2,
+  Both: 3,
+}
+
 type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -116,9 +122,14 @@ export function OrderFormDialog({ open, onOpenChange, order, onSaved }: Props) {
 
     setSaving(true)
     try {
+      const selectedPartner = partners?.find(
+        (p) => String(p.id) === partnerId,
+      )
       const body = {
         order_type: orderType,
         business_partner_name: Number(partnerId),
+        business_partner_type_id:
+          TYPE_NAME_TO_ID[selectedPartner?.business_partner_type ?? ''] ?? 1,
         currency: Number(currency),
         exchange_rate: Number(exchangeRate),
         order_items: items.map((it) => ({
