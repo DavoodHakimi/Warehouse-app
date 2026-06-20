@@ -95,7 +95,7 @@ export default function ProductsPage() {
                 <TableHead className="text-right">قیمت پایه</TableHead>
                 <TableHead className="text-right">وضعیت</TableHead>
                 {(canUpdate || canDelete) && (
-                  <TableHead className="text-left">عملیات</TableHead>
+                  <TableHead className="text-right">عملیات</TableHead>
                 )}
               </TableRow>
             </TableHeader>

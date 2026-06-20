@@ -140,7 +140,7 @@ export function ProductFormDialog({
                 محصول قفل شده در سفارش‌های جدید قابل استفاده نیست.
               </span>
             </div>
-            <Switch id="frozen" checked={isFrozen} onCheckedChange={setIsFrozen} />
+            <Switch id="frozen" checked={isFrozen} onCheckedChange={setIsFrozen}/>
           </div>
 
           <DialogFooter className="mt-2 gap-2 sm:gap-2">
