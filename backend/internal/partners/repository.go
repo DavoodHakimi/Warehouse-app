@@ -15,7 +15,7 @@ func NewRepository(db *gorm.DB) *Repository {
 func (r *Repository) ReadCompanyPartners(companyID int) ([]BusinessPartner, error) {
 
 	var partners []BusinessPartner
-	res := r.db.Where("company_id = ?", companyID).Find(&partners)
+	res := r.db.Joins("BusinessPartnerType").Where("company_id = ?", companyID).Find(&partners)
 	if res.Error != nil {
 
 		return nil, res.Error
