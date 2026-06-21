@@ -12,6 +12,8 @@ import (
 
 func main() {
 	file, _ := os.OpenFile("../../app.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	defer file.Close()
+
 	logger := slog.New(slog.NewMultiHandler(
 		slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
 		slog.NewJSONHandler(file, &slog.HandlerOptions{Level: slog.LevelInfo}),
