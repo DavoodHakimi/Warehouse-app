@@ -69,7 +69,7 @@ func (s *Seeder) seedPartnerTypes(ctx context.Context) error {
 		Create(&records)
 
 	if result.Error != nil {
-		return fmt.Errorf("seeding user types: %w", result.Error)
+		return fmt.Errorf("seeding partner types: %w", result.Error)
 	}
 	log.Printf("Partner types seeded (%d)", len(records))
 	return nil
