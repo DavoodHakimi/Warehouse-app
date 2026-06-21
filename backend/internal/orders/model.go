@@ -35,8 +35,8 @@ type OrderItem struct {
 	gorm.Model
 	ProductID    uint    `json:"product_id"`
 	OrderID      uint    `json:"order_id"`
-	Quantity     int     `gorm:"not null" json:"quantity"`
-	PerItemPrice float64 `gorm:"type:decimal(10,2)" json:"per_item_price"`
+	Quantity     int     `gorm:"not null" binding:"gte=1" json:"quantity"`
+	PerItemPrice float64 `gorm:"type:decimal(25,2)" json:"per_item_price"`
 
 	// Relationships
 	Product products.Product `gorm:"foreignKey:ProductID" json:"product,omitempty"`
