@@ -24,6 +24,11 @@ export type Product = {
   is_frozen: boolean
   default_price: number
 }
+export type OrderItem = {
+  product_id: number
+  quantity: number
+  per_item_price: number
+}
 
 export type Order = {
   id: number
@@ -33,4 +38,5 @@ export type Order = {
   business_partner_name: string
   currency: string
   exchange_rate: number
+  order_items?: OrderItem[]
 }
