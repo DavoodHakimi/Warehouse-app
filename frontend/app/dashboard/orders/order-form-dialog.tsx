@@ -32,6 +32,12 @@ const TYPE_NAME_TO_ID: Record<string, number> = {
   Both: 3,
 }
 
+// Map the currency label returned by the API (Persian name from AllOrders,
+// e.g. "ریال") to the currency ID used by the form.
+const CURRENCY_LABEL_TO_ID: Record<string, string> = Object.fromEntries(
+  CURRENCY_OPTIONS.map((c) => [c.label, String(c.value)]),
+)
+
 type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -82,13 +88,29 @@ export function OrderFormDialog({ open, onOpenChange, order, onSaved }: Props) {
     )
     if (partnerMatch) setPartnerId(String(partnerMatch.id))
 
-    const currencyNameToId: Record<string, string> = {
-      Rial: '1',
-      Dollar: '2',
-      Euro: '3',
-    }
-    setCurrency(currencyNameToId[order.currency] ?? '1')
+    setCurrency(CURRENCY_LABEL_TO_ID[order.currency] ?? '1')
   }, [open, order, partners])
+
+  // On edit, fetch the full order so we can populate its line items.
+  // The `order` prop comes from the list endpoint which omits items.
+  useEffect(() => {
+    if (!open || !order) return
+    apiFetch<Order>(`/orders/${order.id}`)
+      .then((full) => {
+        const loaded = full.order_items ?? []
+        setCurrency(CURRENCY_LABEL_TO_ID[full.currency] ?? '1')
+        setItems(
+          loaded.length
+            ? loaded.map((it) => ({
+                product_id: String(it.product_id),
+                quantity: String(it.quantity),
+                per_item_price: String(it.per_item_price),
+              }))
+            : [{ ...emptyItem }],
+        )
+      })
+      .catch(() => setItems([{ ...emptyItem }]))
+  }, [open, order])
 
   function updateItem(index: number, key: keyof Item, value: string) {
     setItems((prev) =>
@@ -178,7 +200,7 @@ export function OrderFormDialog({ open, onOpenChange, order, onSaved }: Props) {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
               <Label htmlFor="order_type">نوع سفارش</Label>
-              <Select value={orderType} onValueChange={setOrderType}>
+              <Select value={orderType} onValueChange={(v) => v && setOrderType(v)}>
                 <SelectTrigger id="order_type">
                   <SelectValue />
                 </SelectTrigger>
@@ -195,7 +217,7 @@ export function OrderFormDialog({ open, onOpenChange, order, onSaved }: Props) {
             <div className="flex flex-col gap-2">
               <Label htmlFor="partner">شریک تجاری</Label>
               {partners ? (
-                <Select value={partnerId} onValueChange={setPartnerId}>
+                <Select value={partnerId} onValueChange={(v) => v && setPartnerId(v)}>
                   <SelectTrigger id="partner">
                     <SelectValue placeholder="انتخاب شریک">
                       {partners?.find((p) => String(p.id) === partnerId)?.name}
@@ -225,7 +247,7 @@ export function OrderFormDialog({ open, onOpenChange, order, onSaved }: Props) {
 
             <div className="flex flex-col gap-2">
               <Label htmlFor="currency">واحد پول</Label>
-              <Select value={currency} onValueChange={setCurrency}>
+              <Select value={currency} onValueChange={(v) => v && setCurrency(v)}>
                 <SelectTrigger id="currency">
                   <SelectValue>
                     {CURRENCY_OPTIONS.find((c) => String(c.value) === currency)?.label}
@@ -279,14 +301,18 @@ export function OrderFormDialog({ open, onOpenChange, order, onSaved }: Props) {
                   <span className="text-xs text-muted-foreground">محصول</span>
                   <Select
                     value={item.product_id}
-                    onValueChange={(v) => updateItem(index, 'product_id', v)}
+                    onValueChange={(v) => v && updateItem(index, 'product_id', v)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="انتخاب محصول" />
                     </SelectTrigger>
                     <SelectContent align="start">
                       {products
-                        .filter((p) => !p.is_frozen)
+                        .filter(
+                          (p) =>
+                            !p.is_frozen ||
+                            String(p.id) === item.product_id,
+                        )
                         .map((p) => (
                           <SelectItem key={p.id} value={String(p.id)}>
                             {p.name}

@@ -7,8 +7,9 @@ import { PageHeader } from '@/components/page-header'
 import { DataError, EmptyState, TableSkeleton } from '@/components/data-states'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { OrderFormDialog } from './order-form-dialog'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui/card'
 import {
   Table,
@@ -148,12 +149,12 @@ export default function OrdersPage() {
                       <div className="flex items-center justify-start gap-1">
                         {transitions.length > 0 && (
                           <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="outline" size="sm">
-                                <ArrowRightLeft className="size-4" />
-                                تغییر وضعیت
-                                <ChevronDown className="size-4" />
-                              </Button>
+                            <DropdownMenuTrigger
+                              className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'gap-1.5')}
+                            >
+                              <ArrowRightLeft className="size-4" />
+                              تغییر وضعیت
+                              <ChevronDown className="size-4" />
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start">
                               {transitions.map((t) => (

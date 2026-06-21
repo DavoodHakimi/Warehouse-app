@@ -8,7 +8,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Button } from '@/components/ui/button'
+import { buttonVariants } from '@/components/ui/button'
+import type { VariantProps } from 'class-variance-authority'
+import { cn } from '@/lib/utils'
 import { useEffect, useState } from 'react'
 
 const THEMES = [
@@ -28,19 +30,18 @@ export function ThemeToggle() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-9"
-          aria-label="تغییر تم"
-        >
-          {mounted ? (
-            <Icon className="size-[1.2rem]" />
-          ) : (
-            <Sun className="size-[1.2rem]" />
-          )}
-        </Button>
+      <DropdownMenuTrigger
+        className={cn(
+          buttonVariants({ variant: 'ghost', size: 'icon' }),
+          'size-9'
+        )}
+        aria-label="تغییر تم"
+      >
+        {mounted ? (
+          <Icon className="size-[1.2rem]" />
+        ) : (
+          <Sun className="size-[1.2rem]" />
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
         {THEMES.map(({ value, label, Icon }) => (
