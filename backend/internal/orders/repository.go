@@ -1,7 +1,6 @@
 package orders
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/DavoodHakimi/warehouse-app/internal/audit"
@@ -69,11 +68,20 @@ func (r *Repository) Delete(order *Order) error {
 	})
 }
 
-func (r *Repository) StatusUpdate(orderID uint, newStatus string) error {
+func (r *Repository) StatusUpdate(orderID uint, newStatus string, expectedStatus ...string) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		return tx.Model(&Order{}).Where("id = ?", orderID).Updates(map[string]interface{}{
-			"status": newStatus,
-		}).Error
+		query := tx.Model(&Order{}).Where("id = ?", orderID)
+		if len(expectedStatus) > 0 && expectedStatus[0] != "" {
+			query = query.Where("status = ?", expectedStatus[0])
+		}
+		result := query.Update("status", newStatus)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return fmt.Errorf("status transition conflict: order %d is not in expected state", orderID)
+		}
+		return nil
 	})
 }
 
@@ -83,6 +91,16 @@ func (r *Repository) RecordAudit(log *audit.Log) {
 
 func (r *Repository) ApproveSaleTransaction(orderID uint, items []OrderItem) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
+		result := tx.Model(&Order{}).
+			Where("id = ? AND status = ?", orderID, "Pending").
+			Update("status", "Approved")
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return fmt.Errorf("status transition conflict: order %d is not Pending", orderID)
+		}
+
 		for _, item := range items {
 			if err := r.Reserve(tx, item.ProductID, item.Quantity); err != nil {
 				return err
@@ -142,23 +160,23 @@ func (r *Repository) ReceiveStock(tx *gorm.DB, productID uint, amount int) error
 }
 
 func adjustStock(tx *gorm.DB, productID uint, deltaAvail, deltaRes int) error {
-	var stock products.Stock
-	err := tx.Where("product_id = ?", productID).First(&stock).Error
-	if err != nil {
-		if !errors.Is(err, gorm.ErrRecordNotFound) {
-			return err
-		}
-		stock = products.Stock{ProductID: productID, AvailableStock: 0, ReservedStock: 0}
+	result := tx.Model(&products.Stock{}).
+		Where("product_id = ?", productID).
+		Updates(map[string]interface{}{
+			"available_stock": gorm.Expr("available_stock + ?", deltaAvail),
+			"reserved_stock":  gorm.Expr("reserved_stock + ?", deltaRes),
+		})
+	if result.Error != nil {
+		return result.Error
 	}
 
-	stock.AvailableStock += deltaAvail
-	stock.ReservedStock += deltaRes
-	if stock.AvailableStock < 0 {
-		return fmt.Errorf("insufficient available stock for product %d: need %d", productID, -deltaAvail)
-	}
-	if stock.ReservedStock < 0 {
-		return fmt.Errorf("insufficient reserved stock for product %d: need %d", productID, -deltaRes)
+	if result.RowsAffected == 0 {
+		return tx.Create(&products.Stock{
+			ProductID:      productID,
+			AvailableStock: deltaAvail,
+			ReservedStock:  deltaRes,
+		}).Error
 	}
 
-	return tx.Save(&stock).Error
+	return nil
 }
