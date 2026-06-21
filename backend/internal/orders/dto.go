@@ -4,13 +4,14 @@ type OrdersInfo struct {
 	Orders []OrderInfoResponse `json:"orders"`
 }
 type OrderInfoResponse struct {
-	ID                  uint    `json:"id"`
-	OrderType           string  `json:"order_type"`
-	OrderNumber         string  `json:"order_number"`
-	Status              string  `json:"status"`
-	BusinessPartnerName string  `json:"business_partner_name"`
-	Currency            string  `json:"currency"`
-	ExchangeRate        float64 `json:"exchange_rate"`
+	ID                  uint           `json:"id"`
+	OrderType           string         `json:"order_type"`
+	OrderNumber         string         `json:"order_number"`
+	Status              string         `json:"status"`
+	BusinessPartnerName string         `json:"business_partner_name"`
+	Currency            string         `json:"currency"`
+	ExchangeRate        float64        `json:"exchange_rate"`
+	OrderItems          []OrderItemReq `json:"order_items"`
 }
 type CreateOrderRequest struct {
 	OrderType             string         `binding:"required" json:"order_type"`
