@@ -44,6 +44,15 @@ func (s *Service) ReadOrder(orderID string, companyID int) (*OrderInfoResponse, 
 		return nil, err
 	}
 
+	items := make([]OrderItemReq, 0, len(order.OrderItems))
+	for _, it := range order.OrderItems {
+		items = append(items, OrderItemReq{
+			ProductID:    it.ProductID,
+			Quantity:     it.Quantity,
+			PerItemPrice: it.PerItemPrice,
+		})
+	}
+
 	return &OrderInfoResponse{
 		ID:                  order.ID,
 		OrderType:           order.OrderType,
@@ -51,7 +60,8 @@ func (s *Service) ReadOrder(orderID string, companyID int) (*OrderInfoResponse, 
 		Status:              order.Status,
 		BusinessPartnerName: order.BusinessPartner.Name,
 		Currency:            order.Currency.Name,
-		ExchangeRate:        order.ExchangeRate}, nil
+		ExchangeRate:        order.ExchangeRate,
+		OrderItems:          items}, nil
 }
 
 func (s *Service) CreateOrder(o *CreateOrderRequest, cid int) error {
@@ -164,7 +174,7 @@ func (s *Service) Approve(orderID string, companyID int) error {
 	if order.OrderType == "sale" {
 		return s.repo.ApproveSaleTransaction(uint(val), order.OrderItems)
 	}
-	return s.repo.StatusUpdate(uint(val), "Approved")
+	return s.repo.StatusUpdate(uint(val), "Approved", "Pending")
 }
 
 func (s *Service) Pack(orderID string, companyID int) error {
@@ -176,7 +186,7 @@ func (s *Service) Pack(orderID string, companyID int) error {
 	if order.Status != "Approved" || order.OrderType != "sale" {
 		return errors.New("This Order status can not changed to Packed.")
 	}
-	return s.repo.StatusUpdate(uint(val), "Packed")
+	return s.repo.StatusUpdate(uint(val), "Packed", "Approved")
 }
 
 func (s *Service) Ship(orderID string, companyID int) error {
@@ -201,7 +211,7 @@ func (s *Service) MarkWaiting(orderID string, companyID int) error {
 	if order.Status != "Approved" || order.OrderType != "purchase" {
 		return errors.New("This Order status can not changed to Waiting.")
 	}
-	return s.repo.StatusUpdate(uint(val), "Waiting")
+	return s.repo.StatusUpdate(uint(val), "Waiting", "Approved")
 }
 
 func (s *Service) Receive(orderID string, companyID int) error {
